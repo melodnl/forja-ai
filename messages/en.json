@@ -1,0 +1,109 @@
+{
+  "common": {
+    "generate": "Generate",
+    "save": "Save",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "back": "Back",
+    "next": "Next",
+    "search": "Search",
+    "settings": "Settings",
+    "logout": "Log out"
+  },
+  "auth": {
+    "login": "Sign in",
+    "signup": "Sign up",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "fullName": "Full name",
+    "forgotPassword": "Forgot your password?",
+    "resetPassword": "Reset password",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "signupCta": "Create your free account",
+    "loginCta": "Sign in to your account",
+    "googleLogin": "Continue with Google",
+    "orContinueWith": "or continue with",
+    "welcomeBack": "Welcome back",
+    "createAccount": "Create your account",
+    "tagline": "Forge creatives with AI. Connect. Generate. Profit."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "templates": "Templates",
+    "library": "Library",
+    "settings": "Settings",
+    "billing": "Billing",
+    "newBoard": "New Board"
+  },
+  "dashboard": {
+    "title": "My Boards",
+    "empty": "No boards yet. Create your first one!",
+    "createFirst": "Create my first board"
+  },
+  "canvas": {
+    "addNode": "Add node",
+    "imagesConnected": "{count}/{max} images connected",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "unsaved": "Unsaved changes"
+  },
+  "nodes": {
+    "creative": {
+      "title": "Creative Node",
+      "model": "Model",
+      "aspectRatio": "Aspect ratio",
+      "resolution": "Resolution",
+      "format": "Format",
+      "prompt": "Prompt",
+      "enhance": "Enhance",
+      "templates": "Templates",
+      "variants": "Variants",
+      "generate": "Generate Creative"
+    },
+    "image": {
+      "title": "Image",
+      "upload": "Drag or click to upload",
+      "replace": "Replace",
+      "download": "Download"
+    },
+    "prompt": {
+      "title": "Prompt",
+      "enhance": "Enhance with AI",
+      "templates": "Prompt templates",
+      "placeholder": "Describe what you want to create..."
+    },
+    "video": {
+      "title": "Video",
+      "download": "Download video"
+    },
+    "voice": {
+      "title": "Voice",
+      "provider": "Provider",
+      "voice": "Voice",
+      "stability": "Stability",
+      "similarity": "Similarity",
+      "generateVoice": "Generate voice"
+    },
+    "copy": {
+      "title": "Copy",
+      "model": "Model",
+      "type": "Type",
+      "tone": "Tone",
+      "language": "Language",
+      "briefing": "Briefing",
+      "variations": "Variations",
+      "generateCopy": "Generate copy"
+    }
+  },
+  "credits": {
+    "balance": "Credits",
+    "insufficient": "Insufficient credits",
+    "buy": "Buy credits"
+  }
+}

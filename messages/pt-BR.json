@@ -1,0 +1,109 @@
+{
+  "common": {
+    "generate": "Gerar",
+    "save": "Salvar",
+    "delete": "Deletar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "back": "Voltar",
+    "next": "Pr\u00f3ximo",
+    "search": "Buscar",
+    "settings": "Configura\u00e7\u00f5es",
+    "logout": "Sair"
+  },
+  "auth": {
+    "login": "Entrar",
+    "signup": "Criar conta",
+    "email": "E-mail",
+    "password": "Senha",
+    "confirmPassword": "Confirmar senha",
+    "fullName": "Nome completo",
+    "forgotPassword": "Esqueceu a senha?",
+    "resetPassword": "Redefinir senha",
+    "noAccount": "N\u00e3o tem conta?",
+    "hasAccount": "J\u00e1 tem conta?",
+    "signupCta": "Crie sua conta gr\u00e1tis",
+    "loginCta": "Entre na sua conta",
+    "googleLogin": "Continuar com Google",
+    "orContinueWith": "ou continue com",
+    "welcomeBack": "Bem-vindo de volta",
+    "createAccount": "Crie sua conta",
+    "tagline": "Forje criativos com IA. Conecte. Gere. Lucre."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "templates": "Templates",
+    "library": "Biblioteca",
+    "settings": "Configura\u00e7\u00f5es",
+    "billing": "Cobran\u00e7a",
+    "newBoard": "Novo Board"
+  },
+  "dashboard": {
+    "title": "Meus Boards",
+    "empty": "Nenhum board ainda. Crie seu primeiro!",
+    "createFirst": "Criar meu primeiro board"
+  },
+  "canvas": {
+    "addNode": "Adicionar n\u00f3",
+    "imagesConnected": "{count}/{max} imagens conectadas",
+    "saving": "Salvando...",
+    "saved": "Salvo",
+    "unsaved": "Altera\u00e7\u00f5es n\u00e3o salvas"
+  },
+  "nodes": {
+    "creative": {
+      "title": "N\u00f3 Criativo",
+      "model": "Modelo",
+      "aspectRatio": "Propor\u00e7\u00e3o",
+      "resolution": "Resolu\u00e7\u00e3o",
+      "format": "Formato",
+      "prompt": "Prompt",
+      "enhance": "Aprimorar",
+      "templates": "Templates",
+      "variants": "Variantes",
+      "generate": "Gerar Criativo"
+    },
+    "image": {
+      "title": "Imagem",
+      "upload": "Arraste ou clique para enviar",
+      "replace": "Substituir",
+      "download": "Baixar"
+    },
+    "prompt": {
+      "title": "Prompt",
+      "enhance": "Aprimorar com IA",
+      "templates": "Templates de prompt",
+      "placeholder": "Descreva o que voc\u00ea quer criar..."
+    },
+    "video": {
+      "title": "V\u00eddeo",
+      "download": "Baixar v\u00eddeo"
+    },
+    "voice": {
+      "title": "Voz",
+      "provider": "Provedor",
+      "voice": "Voz",
+      "stability": "Estabilidade",
+      "similarity": "Similaridade",
+      "generateVoice": "Gerar voz"
+    },
+    "copy": {
+      "title": "Copy",
+      "model": "Modelo",
+      "type": "Tipo",
+      "tone": "Tom",
+      "language": "Idioma",
+      "briefing": "Briefing",
+      "variations": "Varia\u00e7\u00f5es",
+      "generateCopy": "Gerar copy"
+    }
+  },
+  "credits": {
+    "balance": "Cr\u00e9ditos",
+    "insufficient": "Cr\u00e9ditos insuficientes",
+    "buy": "Comprar cr\u00e9ditos"
+  }
+}

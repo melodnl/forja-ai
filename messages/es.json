@@ -1,0 +1,109 @@
+{
+  "common": {
+    "generate": "Generar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "\u00c9xito",
+    "back": "Volver",
+    "next": "Siguiente",
+    "search": "Buscar",
+    "settings": "Configuraci\u00f3n",
+    "logout": "Salir"
+  },
+  "auth": {
+    "login": "Iniciar sesi\u00f3n",
+    "signup": "Crear cuenta",
+    "email": "Correo electr\u00f3nico",
+    "password": "Contrase\u00f1a",
+    "confirmPassword": "Confirmar contrase\u00f1a",
+    "fullName": "Nombre completo",
+    "forgotPassword": "\u00bfOlvidaste tu contrase\u00f1a?",
+    "resetPassword": "Restablecer contrase\u00f1a",
+    "noAccount": "\u00bfNo tienes cuenta?",
+    "hasAccount": "\u00bfYa tienes cuenta?",
+    "signupCta": "Crea tu cuenta gratis",
+    "loginCta": "Ingresa a tu cuenta",
+    "googleLogin": "Continuar con Google",
+    "orContinueWith": "o contin\u00faa con",
+    "welcomeBack": "Bienvenido de vuelta",
+    "createAccount": "Crea tu cuenta",
+    "tagline": "Forja creativos con IA. Conecta. Genera. Lucra."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "templates": "Plantillas",
+    "library": "Biblioteca",
+    "settings": "Configuraci\u00f3n",
+    "billing": "Facturaci\u00f3n",
+    "newBoard": "Nuevo Board"
+  },
+  "dashboard": {
+    "title": "Mis Boards",
+    "empty": "Ning\u00fan board a\u00fan. \u00a1Crea tu primero!",
+    "createFirst": "Crear mi primer board"
+  },
+  "canvas": {
+    "addNode": "Agregar nodo",
+    "imagesConnected": "{count}/{max} im\u00e1genes conectadas",
+    "saving": "Guardando...",
+    "saved": "Guardado",
+    "unsaved": "Cambios sin guardar"
+  },
+  "nodes": {
+    "creative": {
+      "title": "Nodo Creativo",
+      "model": "Modelo",
+      "aspectRatio": "Proporci\u00f3n",
+      "resolution": "Resoluci\u00f3n",
+      "format": "Formato",
+      "prompt": "Prompt",
+      "enhance": "Mejorar",
+      "templates": "Plantillas",
+      "variants": "Variantes",
+      "generate": "Generar Creativo"
+    },
+    "image": {
+      "title": "Imagen",
+      "upload": "Arrastra o haz clic para subir",
+      "replace": "Reemplazar",
+      "download": "Descargar"
+    },
+    "prompt": {
+      "title": "Prompt",
+      "enhance": "Mejorar con IA",
+      "templates": "Plantillas de prompt",
+      "placeholder": "Describe lo que quieres crear..."
+    },
+    "video": {
+      "title": "Video",
+      "download": "Descargar video"
+    },
+    "voice": {
+      "title": "Voz",
+      "provider": "Proveedor",
+      "voice": "Voz",
+      "stability": "Estabilidad",
+      "similarity": "Similitud",
+      "generateVoice": "Generar voz"
+    },
+    "copy": {
+      "title": "Copy",
+      "model": "Modelo",
+      "type": "Tipo",
+      "tone": "Tono",
+      "language": "Idioma",
+      "briefing": "Briefing",
+      "variations": "Variaciones",
+      "generateCopy": "Generar copy"
+    }
+  },
+  "credits": {
+    "balance": "Cr\u00e9ditos",
+    "insufficient": "Cr\u00e9ditos insuficientes",
+    "buy": "Comprar cr\u00e9ditos"
+  }
+}
