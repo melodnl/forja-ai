@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Forja.ai — Forje criativos com IA",
-    template: "%s | Forja.ai",
+    default: "Forjea — Forje criativos com IA",
+    template: "%s | Forjea",
   },
   description:
     "Orquestre múltiplas IAs num canvas visual único. Crie imagens, vídeos, vozes e copies publicitárias conectando nós inteligentes.",

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "=== Forja.ai — Setup VPS (Ubuntu 24.04) ==="
+echo "=== Forjea — Setup VPS (Ubuntu 24.04) ==="
 
 # Atualizar sistema
 sudo apt update && sudo apt upgrade -y

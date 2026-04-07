@@ -2,7 +2,7 @@
 set -e
 
 echo "=========================================="
-echo "  FORJA.AI — Deploy Completo na VPS"
+echo "  FORJEA — Deploy Completo na VPS"
 echo "=========================================="
 
 # 1. Atualizar sistema

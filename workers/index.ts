@@ -6,7 +6,7 @@
  * forem configurados com Redis ativo.
  */
 
-console.log("[workers] Forja.ai workers iniciados");
+console.log("[workers] Forjea workers iniciados");
 console.log("[workers] Aguardando configuração de Redis/BullMQ...");
 
 // Manter processo vivo

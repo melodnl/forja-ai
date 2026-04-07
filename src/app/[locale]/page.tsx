@@ -134,7 +134,7 @@ export default function LandingPage() {
             <div className="h-3 w-3 rounded-full bg-[var(--forja-spark)]" />
             <div className="h-3 w-3 rounded-full bg-[var(--forja-warning)]" />
             <div className="h-3 w-3 rounded-full bg-[var(--forja-success)]" />
-            <span className="ml-3 text-xs text-[var(--forja-text-dim)]">Forja.ai — Canvas</span>
+            <span className="ml-3 text-xs text-[var(--forja-text-dim)]">Forjea — Canvas</span>
           </div>
           <div className="relative h-64 md:h-96 bg-[var(--canvas-bg)]" style={{ backgroundImage: "radial-gradient(var(--canvas-grid) 1px, transparent 1px)", backgroundSize: "24px 24px" }}>
             {/* Fake nodes */}
@@ -239,7 +239,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <ForjaLogo size="sm" />
           <p className="text-xs text-[var(--forja-text-dim)]">
-            © 2026 Forja.ai — Forje. Conecte. Lucre.
+            © 2026 Forjea — Forje. Conecte. Lucre.
           </p>
         </div>
       </footer>

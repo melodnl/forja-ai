@@ -1,4 +1,4 @@
-export const APP_NAME = "Forja.ai";
+export const APP_NAME = "Forjea";
 export const APP_TAGLINE = "Forje criativos com IA. Conecte. Gere. Lucre.";
 
 export const PLANS = ["free", "starter", "pro", "business"] as const;

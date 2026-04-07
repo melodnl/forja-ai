@@ -1,14 +1,14 @@
 export function ForjaLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   const sizeMap = {
-    sm: { w: 105, h: 28 },
-    md: { w: 145, h: 38 },
-    lg: { w: 210, h: 54 },
+    sm: { w: 115, h: 28 },
+    md: { w: 158, h: 38 },
+    lg: { w: 230, h: 54 },
   };
 
   const { w, h } = sizeMap[size];
 
   return (
-    <svg width={w} height={h} viewBox="0 0 145 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width={w} height={h} viewBox="0 0 158 38" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Forge icon — anvil + hammer */}
       <rect x="1" y="7" width="24" height="24" rx="7" fill="var(--forja-ember)" />
       <rect x="7" y="14" width="12" height="3.5" rx="1.5" fill="var(--forja-bg)" />
@@ -24,7 +24,7 @@ export function ForjaLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
         <animate attributeName="opacity" values="0.5;0.1;0.5" dur="1.8s" repeatCount="indefinite" />
       </circle>
 
-      {/* FORJA text */}
+      {/* FORJEA text */}
       <text
         x="32"
         y="26"
@@ -34,20 +34,20 @@ export function ForjaLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
         letterSpacing="-0.3"
         fill="var(--forja-text)"
       >
-        FORJA
+        FORJEA
       </text>
 
-      {/* .ai pill badge */}
-      <rect x="103" y="12" width="36" height="18" rx="9" fill="var(--forja-ember)" opacity="0.15" />
+      {/* .app pill badge */}
+      <rect x="112" y="12" width="42" height="18" rx="9" fill="var(--forja-ember)" opacity="0.15" />
       <text
-        x="109"
+        x="119"
         y="25.5"
         fontFamily="system-ui, -apple-system, sans-serif"
         fontWeight="700"
         fontSize="13"
         fill="var(--forja-ember)"
       >
-        .ai
+        .app
       </text>
     </svg>
   );

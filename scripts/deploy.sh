@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "=== Forja.ai — Deploy ==="
+echo "=== Forjea — Deploy ==="
 
 cd ~/forja-ai
 
