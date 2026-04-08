@@ -1,8 +1,8 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, useEffect, useRef } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Flame, Loader2, CheckCircle, XCircle, Sparkles, BookOpen, ChevronDown } from "lucide-react";
+import { Flame, Loader2, CheckCircle, XCircle, Sparkles, BookOpen, ChevronDown, Download, ExternalLink } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas.store";
 import { useGeneration } from "@/hooks/useGeneration";
 import { useNodeInputs } from "@/hooks/useNodeConnections";
@@ -83,6 +83,22 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
   const { imageUrls: connectedImages, promptText: connectedPrompt } = useNodeInputs(id);
   const [enhancing, setEnhancing] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Timer de progresso
+  useEffect(() => {
+    if (isGenerating) {
+      setElapsed(0);
+      timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    } else {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [isGenerating]);
+
+  const estimatedTime = isVideo ? 60 : 20;
+  const progress = Math.min((elapsed / estimatedTime) * 100, 95);
 
   const modelValue = nodeData.model || "nano-banana-2";
   const isVideo = VIDEO_MODELS.some((m) => m.value === modelValue);
@@ -261,21 +277,72 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
           </div>
         </div>
 
-        {/* Output */}
-        {nodeData.outputUrls && nodeData.outputUrls.length > 0 && (
-          <div className="grid grid-cols-2 gap-1">
-            {nodeData.outputUrls.map((url, i) => (<img key={i} src={url} alt={`${i + 1}`} className="rounded-md object-cover w-full h-20" />))}
+        {/* Progress bar durante geração */}
+        {isGenerating && (
+          <div className="flex flex-col gap-2 rounded-lg bg-[var(--forja-bg)] border border-[var(--forja-border)] p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-[var(--forja-ember)]" />
+                <span className="text-xs text-[var(--forja-text)]">Gerando...</span>
+              </div>
+              <span className="text-[10px] text-[var(--forja-text-dim)] font-mono">{elapsed}s</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-[var(--forja-border)] overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[var(--forja-ember)] to-[var(--forja-amber)] transition-all duration-1000 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-[var(--forja-text-dim)]">
+              {isVideo ? "Vídeos levam ~30-60s" : "Imagens levam ~10-20s"}
+            </span>
           </div>
         )}
 
-        {/* Status */}
-        {nodeData.status === "completed" && (<div className="flex items-center gap-1.5 text-[var(--forja-success)] text-xs"><CheckCircle className="h-3.5 w-3.5" /> Concluído</div>)}
-        {nodeData.status === "failed" && (<div className="flex items-center gap-1.5 text-[var(--forja-error)] text-xs"><XCircle className="h-3.5 w-3.5" /> Falhou — tente novamente</div>)}
+        {/* Resultado — galeria de outputs */}
+        {nodeData.outputUrls && nodeData.outputUrls.length > 0 && (
+          <div className="flex flex-col gap-2 rounded-lg bg-[var(--forja-bg)] border border-[var(--forja-border)] p-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-medium text-[var(--forja-success)] flex items-center gap-1">
+                <CheckCircle className="h-3 w-3" />
+                {nodeData.outputUrls.length} resultado(s)
+              </span>
+              <span className="text-[10px] text-[var(--forja-text-dim)]">{elapsed > 0 ? `${elapsed}s` : ""}</span>
+            </div>
+            <div className={`grid gap-1.5 ${nodeData.outputUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+              {nodeData.outputUrls.map((url, i) => (
+                <div key={i} className="relative group/img rounded-md overflow-hidden">
+                  {isVideo ? (
+                    <video src={url} controls className="w-full rounded-md max-h-40 bg-black" />
+                  ) : (
+                    <img src={url} alt={`Resultado ${i + 1}`} className="w-full rounded-md object-cover max-h-40" />
+                  )}
+                  <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
+                    <a href={url} download className="rounded bg-black/70 p-1 hover:bg-black/90">
+                      <Download className="h-3 w-3 text-white" />
+                    </a>
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="rounded bg-black/70 p-1 hover:bg-black/90">
+                      <ExternalLink className="h-3 w-3 text-white" />
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-        {/* Gerar */}
+        {/* Status de erro */}
+        {nodeData.status === "failed" && !isGenerating && (
+          <div className="flex items-center gap-1.5 text-[var(--forja-error)] text-xs rounded-lg bg-[var(--forja-error)]/10 px-3 py-2">
+            <XCircle className="h-3.5 w-3.5 shrink-0" />
+            Falhou — tente novamente
+          </div>
+        )}
+
+        {/* Botão Gerar */}
         <button onClick={handleGenerate} disabled={isGenerating}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--forja-ember)] py-2.5 text-sm font-medium text-[var(--forja-bg)] transition-all duration-200 hover:bg-[var(--forja-ember-hover)] hover:shadow-[0_0_24px_rgba(255,107,26,0.15)] disabled:opacity-50">
-          {isGenerating ? (<><Loader2 className="h-4 w-4 animate-spin" /> Gerando...</>) : (<><Flame className="h-4 w-4" /> Gerar</>)}
+          {isGenerating ? (<><Loader2 className="h-4 w-4 animate-spin" /> Gerando... {elapsed}s</>) : (<><Flame className="h-4 w-4" /> Gerar</>)}
         </button>
       </div>
 
