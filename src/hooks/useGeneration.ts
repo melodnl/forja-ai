@@ -8,9 +8,48 @@ export function useGeneration() {
   const updateNodeData = useCanvasStore((s) => s.updateNodeData);
   const pollingRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
 
+  const createOutputNodes = useCallback(
+    (sourceNodeId: string, urls: string[], isVideo: boolean) => {
+      const { nodes, addNode, edges } = useCanvasStore.getState();
+      const sourceNode = nodes.find((n) => n.id === sourceNodeId);
+      if (!sourceNode) return;
+
+      const baseX = sourceNode.position.x + 400;
+      const baseY = sourceNode.position.y;
+
+      urls.forEach((url, i) => {
+        const outputId = `${isVideo ? "video" : "image"}-output-${Date.now()}-${i}`;
+        const yOffset = i * 220;
+
+        addNode({
+          id: outputId,
+          type: isVideo ? "video" : "image",
+          position: { x: baseX, y: baseY + yOffset },
+          data: isVideo
+            ? { label: `Vídeo ${i + 1}`, url, duration: 0 }
+            : { label: `Imagem ${i + 1}`, url, width: 0, height: 0, filename: "" },
+        });
+
+        // Conectar edge do creative → output
+        const store = useCanvasStore.getState();
+        const newEdge = {
+          id: `edge-${sourceNodeId}-${outputId}`,
+          source: sourceNodeId,
+          target: outputId,
+          type: "animated",
+          animated: true,
+        };
+        useCanvasStore.setState({
+          edges: [...store.edges, newEdge],
+          hasUnsavedChanges: true,
+        });
+      });
+    },
+    []
+  );
+
   const startPolling = useCallback(
-    (generationId: string, nodeId: string) => {
-      // Evitar polling duplicado
+    (generationId: string, nodeId: string, isVideo: boolean) => {
       if (pollingRef.current.has(generationId)) return;
 
       const interval = setInterval(async () => {
@@ -22,10 +61,17 @@ export function useGeneration() {
             clearInterval(interval);
             pollingRef.current.delete(generationId);
 
+            const urls = data.outputUrls || [];
+
             updateNodeData(nodeId, {
               status: "completed",
-              outputUrls: data.outputUrls || [],
+              outputUrls: urls,
             });
+
+            // Criar nós de output conectados
+            if (urls.length > 0) {
+              createOutputNodes(nodeId, urls, isVideo);
+            }
 
             toast.success("Geração concluída!");
           } else if (data.status === "failed") {
@@ -36,13 +82,13 @@ export function useGeneration() {
             toast.error(data.error || "Geração falhou");
           }
         } catch {
-          // Ignorar erros temporários de polling
+          // Ignorar erros temporários
         }
       }, 5000);
 
       pollingRef.current.set(generationId, interval);
 
-      // Timeout máximo: 10 minutos
+      // Timeout: 10 minutos
       setTimeout(() => {
         if (pollingRef.current.has(generationId)) {
           clearInterval(pollingRef.current.get(generationId)!);
@@ -52,7 +98,7 @@ export function useGeneration() {
         }
       }, 10 * 60 * 1000);
     },
-    [updateNodeData]
+    [updateNodeData, createOutputNodes]
   );
 
   const generate = useCallback(
@@ -68,6 +114,14 @@ export function useGeneration() {
       provider?: string;
     }) => {
       updateNodeData(nodeId, { status: "generating" });
+
+      // Detectar se é vídeo
+      const videoModels = [
+        "seedance-2", "seedance-2-fast", "seedance-1.5-pro",
+        "veo3-fast", "veo3-quality", "veo3-lite", "veo3",
+        "runway", "grok-video", "sora-2-characters",
+      ];
+      const isVideo = videoModels.includes(params.model);
 
       try {
         const res = await fetch("/api/generate/image", {
@@ -85,8 +139,8 @@ export function useGeneration() {
         }
 
         toast.info("Geração iniciada...");
-        startPolling(data.generationId, nodeId);
-      } catch (err) {
+        startPolling(data.generationId, nodeId, isVideo);
+      } catch {
         updateNodeData(nodeId, { status: "failed" });
         toast.error("Erro ao conectar com o servidor");
       }
