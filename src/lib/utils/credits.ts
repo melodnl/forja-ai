@@ -1,8 +1,12 @@
 export const CREDIT_COSTS = {
   // Imagem
   "grok-imagine": 5,
-  "imagen4-ultra": 10,
-  "imagen4": 8,
+  "nano-banana-2": 3,
+  "nano-banana-pro": 5,
+  "nano-banana": 3,
+  "imagen4-ultra": 8,
+  "imagen4": 5,
+  "imagen4-fast": 3,
   "ideogram-v3": 8,
   "qwen": 5,
   "grok-img2img": 5,
@@ -14,6 +18,7 @@ export const CREDIT_COSTS = {
   "veo3-quality": 50,
   "veo3-fast": 30,
   "veo3-lite": 15,
+  "veo3": 40,
   "runway": 25,
   "grok-video": 15,
   "sora-2-characters": 30,

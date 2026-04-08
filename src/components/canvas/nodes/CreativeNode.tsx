@@ -12,8 +12,12 @@ import { NodeDeleteButton } from "./NodeWrapper";
 
 const IMAGE_MODELS = [
   { value: "grok-imagine", label: "Grok Imagine" },
-  { value: "imagen4-ultra", label: "Google Imagen 4 Ultra" },
-  { value: "imagen4", label: "Google Imagen 4" },
+  { value: "nano-banana-2", label: "Nano Banana 2" },
+  { value: "nano-banana-pro", label: "Nano Banana Pro" },
+  { value: "nano-banana", label: "Nano Banana" },
+  { value: "imagen4-ultra", label: "Imagen 4 Ultra" },
+  { value: "imagen4", label: "Imagen 4" },
+  { value: "imagen4-fast", label: "Imagen 4 Fast" },
   { value: "ideogram-v3", label: "Ideogram v3" },
   { value: "qwen", label: "Qwen" },
 ];
@@ -26,6 +30,7 @@ const VIDEO_MODELS = [
   { value: "veo3-quality", label: "Veo 3 Quality" },
   { value: "veo3-lite", label: "Veo 3 Lite" },
   { value: "runway", label: "Runway Gen-4" },
+  { value: "veo3", label: "Veo 3 (Google)" },
   { value: "grok-video", label: "Grok Video" },
   { value: "sora-2-characters", label: "Sora 2 Characters (UGC)" },
 ];
@@ -45,6 +50,7 @@ const DURATIONS = ["5s", "10s", "15s", "30s", "60s"];
 const FORMATS_IMAGE = ["png", "jpg", "webp"];
 const API_PROVIDERS = [
   { value: "kie", label: "KieAI" },
+  { value: "google", label: "Google (sua key)" },
   { value: "venice", label: "VeniceAI" },
 ];
 
@@ -283,18 +289,24 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-[var(--forja-text)]">
               {(() => {
+                const isGoogleProvider = provider === "google";
                 const costs: Record<string, { credits: number; usd: string }> = {
                   "grok-imagine": { credits: 5, usd: "$0.02" },
-                  "imagen4-ultra": { credits: 10, usd: "$0.05" },
-                  "imagen4": { credits: 8, usd: "$0.04" },
+                  "nano-banana-2": { credits: 3, usd: isGoogleProvider ? "$0.00" : "$0.02" },
+                  "nano-banana-pro": { credits: 5, usd: isGoogleProvider ? "$0.00" : "$0.04" },
+                  "nano-banana": { credits: 3, usd: isGoogleProvider ? "$0.00" : "$0.02" },
+                  "imagen4-ultra": { credits: 8, usd: isGoogleProvider ? "$0.06" : "$0.08" },
+                  "imagen4": { credits: 5, usd: isGoogleProvider ? "$0.04" : "$0.06" },
+                  "imagen4-fast": { credits: 3, usd: isGoogleProvider ? "$0.02" : "$0.03" },
                   "ideogram-v3": { credits: 8, usd: "$0.04" },
                   "qwen": { credits: 5, usd: "$0.02" },
                   "seedance-2": { credits: 20, usd: "$0.80" },
                   "seedance-2-fast": { credits: 15, usd: "$0.50" },
                   "seedance-1.5-pro": { credits: 25, usd: "$1.00" },
-                  "veo3-fast": { credits: 30, usd: "$0.40" },
-                  "veo3-quality": { credits: 50, usd: "$0.80" },
-                  "veo3-lite": { credits: 15, usd: "$0.20" },
+                  "veo3-fast": { credits: 30, usd: isGoogleProvider ? "$0.00" : "$0.40" },
+                  "veo3-quality": { credits: 50, usd: isGoogleProvider ? "$0.00" : "$0.80" },
+                  "veo3-lite": { credits: 15, usd: isGoogleProvider ? "$0.00" : "$0.20" },
+                  "veo3": { credits: 40, usd: isGoogleProvider ? "$0.00" : "$0.60" },
                   "runway": { credits: 25, usd: "$0.50" },
                   "grok-video": { credits: 15, usd: "$0.30" },
                   "sora-2-characters": { credits: 30, usd: "$0.60" },

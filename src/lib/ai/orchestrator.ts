@@ -2,6 +2,7 @@ import type { AIProvider, GenerateParams, JobStatus } from "@/types/ai";
 import { kieProvider } from "./providers/kie";
 import { falProvider } from "./providers/fal";
 import { veniceProvider } from "./providers/venice";
+import { googleProvider } from "./providers/google";
 
 const VIDEO_MODELS = [
   "seedance-2",
@@ -25,6 +26,7 @@ function getProviderByName(name: string): AIProvider {
     kie: kieProvider,
     fal: falProvider,
     venice: veniceProvider,
+    google: googleProvider,
   };
   return map[name] || kieProvider;
 }
