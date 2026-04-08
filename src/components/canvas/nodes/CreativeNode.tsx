@@ -86,6 +86,10 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const modelValue = nodeData.model || "grok-imagine";
+  const isVideo = VIDEO_MODELS.some((m) => m.value === modelValue);
+  const isGenerating = nodeData.status === "generating";
+
   // Timer de progresso
   useEffect(() => {
     if (isGenerating) {
@@ -99,10 +103,6 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
 
   const estimatedTime = isVideo ? 60 : 20;
   const progress = Math.min((elapsed / estimatedTime) * 100, 95);
-
-  const modelValue = nodeData.model || "nano-banana-2";
-  const isVideo = VIDEO_MODELS.some((m) => m.value === modelValue);
-  const isGenerating = nodeData.status === "generating";
   const templates = PROMPT_TEMPLATES[isVideo ? "video" : "image"];
   const provider = (nodeData as unknown as Record<string, unknown>).provider as string || "kie";
   const duration = (nodeData as unknown as Record<string, unknown>).duration as string || "10s";
