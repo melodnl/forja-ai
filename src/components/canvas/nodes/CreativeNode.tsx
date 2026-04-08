@@ -10,32 +10,51 @@ import { toast } from "sonner";
 import type { CreativeNodeData } from "@/types/nodes";
 import { NodeDeleteButton } from "./NodeWrapper";
 
-const IMAGE_MODELS = [
-  { value: "grok-imagine", label: "Grok Imagine" },
-  { value: "nano-banana-2", label: "Nano Banana 2" },
-  { value: "nano-banana-pro", label: "Nano Banana Pro" },
-  { value: "nano-banana", label: "Nano Banana" },
-  { value: "imagen4-ultra", label: "Imagen 4 Ultra" },
-  { value: "imagen4", label: "Imagen 4" },
-  { value: "imagen4-fast", label: "Imagen 4 Fast" },
-  { value: "ideogram-v3", label: "Ideogram v3" },
-  { value: "qwen", label: "Qwen" },
-];
+// Modelos por provider
+const MODELS_BY_PROVIDER: Record<string, { image: { value: string; label: string }[]; video: { value: string; label: string }[] }> = {
+  google: {
+    image: [
+      { value: "nano-banana-2", label: "Nano Banana 2" },
+      { value: "nano-banana-pro", label: "Nano Banana Pro" },
+      { value: "nano-banana", label: "Nano Banana" },
+      { value: "imagen4-ultra", label: "Imagen 4 Ultra" },
+      { value: "imagen4", label: "Imagen 4" },
+      { value: "imagen4-fast", label: "Imagen 4 Fast" },
+    ],
+    video: [
+      { value: "veo3", label: "Veo 3" },
+      { value: "veo3-fast", label: "Veo 3 Fast" },
+    ],
+  },
+  kie: {
+    image: [
+      { value: "grok-imagine", label: "Grok Imagine" },
+      { value: "ideogram-v3", label: "Ideogram v3" },
+      { value: "qwen", label: "Qwen" },
+    ],
+    video: [
+      { value: "seedance-2", label: "Seedance 2.0 (UGC/Lip Sync)" },
+      { value: "seedance-2-fast", label: "Seedance 2.0 Fast" },
+      { value: "seedance-1.5-pro", label: "Seedance 1.5 Pro" },
+      { value: "veo3-fast", label: "Veo 3 Fast (Kie)" },
+      { value: "veo3-quality", label: "Veo 3 Quality (Kie)" },
+      { value: "veo3-lite", label: "Veo 3 Lite (Kie)" },
+      { value: "runway", label: "Runway Gen-4" },
+      { value: "grok-video", label: "Grok Video" },
+      { value: "sora-2-characters", label: "Sora 2 Characters (UGC)" },
+    ],
+  },
+  venice: {
+    image: [
+      { value: "grok-imagine", label: "Flux Dev" },
+      { value: "ideogram-v3", label: "Flux Dev Uncensored" },
+    ],
+    video: [],
+  },
+};
 
-const VIDEO_MODELS = [
-  { value: "seedance-2", label: "Seedance 2.0 (UGC/Lip Sync)" },
-  { value: "seedance-2-fast", label: "Seedance 2.0 Fast" },
-  { value: "seedance-1.5-pro", label: "Seedance 1.5 Pro" },
-  { value: "veo3-fast", label: "Veo 3 Fast" },
-  { value: "veo3-quality", label: "Veo 3 Quality" },
-  { value: "veo3-lite", label: "Veo 3 Lite" },
-  { value: "runway", label: "Runway Gen-4" },
-  { value: "veo3", label: "Veo 3 (Google)" },
-  { value: "grok-video", label: "Grok Video" },
-  { value: "sora-2-characters", label: "Sora 2 Characters (UGC)" },
-];
-
-const ALL_MODELS = [...IMAGE_MODELS, ...VIDEO_MODELS];
+// Todos os modelos de vídeo (pra detectar isVideo)
+const ALL_VIDEO_VALUES = Object.values(MODELS_BY_PROVIDER).flatMap((p) => p.video.map((m) => m.value));
 
 const ASPECT_RATIOS = [
   { value: "1:1", label: "Quadrado (1:1)" },
@@ -92,9 +111,14 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const modelValue = nodeData.model || "grok-imagine";
-  const isVideo = VIDEO_MODELS.some((m) => m.value === modelValue);
+  const provider = (nodeData as unknown as Record<string, unknown>).provider as string || "kie";
+  const duration = (nodeData as unknown as Record<string, unknown>).duration as string || "10s";
+  const modelValue = nodeData.model || (provider === "google" ? "nano-banana-2" : "grok-imagine");
+  const isVideo = ALL_VIDEO_VALUES.includes(modelValue);
   const isGenerating = nodeData.status === "generating";
+  const providerModels = MODELS_BY_PROVIDER[provider] || MODELS_BY_PROVIDER.kie;
+  const imageModels = providerModels.image;
+  const videoModels = providerModels.video;
 
   // Timer de progresso
   useEffect(() => {
@@ -110,8 +134,6 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
   const estimatedTime = isVideo ? 60 : 20;
   const progress = Math.min((elapsed / estimatedTime) * 100, 95);
   const templates = PROMPT_TEMPLATES[isVideo ? "video" : "image"];
-  const provider = (nodeData as unknown as Record<string, unknown>).provider as string || "kie";
-  const duration = (nodeData as unknown as Record<string, unknown>).duration as string || "10s";
 
   const handleGenerate = useCallback(() => {
     const finalPrompt = nodeData.prompt || connectedPrompt || "";
@@ -176,8 +198,8 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
           <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">Modelo</label>
           <select value={modelValue} onChange={(e) => handleChange("model", e.target.value)}
             className="rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-2 text-xs text-[var(--forja-text)] focus:border-[var(--forja-ember)] focus:outline-none">
-            <optgroup label="Imagem">{IMAGE_MODELS.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}</optgroup>
-            <optgroup label="Vídeo">{VIDEO_MODELS.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}</optgroup>
+            {imageModels.length > 0 && <optgroup label="Imagem">{imageModels.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}</optgroup>}
+            {videoModels.length > 0 && <optgroup label="Vídeo">{videoModels.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}</optgroup>}
           </select>
         </div>
 
@@ -220,7 +242,12 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
         {/* API Provider */}
         <div className="flex flex-col gap-1">
           <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">API Provider</label>
-          <select value={provider} onChange={(e) => handleChange("provider", e.target.value)}
+          <select value={provider} onChange={(e) => {
+            const newProvider = e.target.value;
+            const newModels = MODELS_BY_PROVIDER[newProvider] || MODELS_BY_PROVIDER.kie;
+            const firstModel = newModels.image[0]?.value || newModels.video[0]?.value || "grok-imagine";
+            updateNodeData(id, { provider: newProvider, model: firstModel });
+          }}
             className="rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-2 text-xs text-[var(--forja-text)] focus:border-[var(--forja-ember)] focus:outline-none">
             {API_PROVIDERS.map((p) => (<option key={p.value} value={p.value}>{p.label}</option>))}
           </select>
