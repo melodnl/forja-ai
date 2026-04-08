@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Download, Heart, Image as ImageIcon, Video, Volume2, Trash2 } from "lucide-react";
+import { Download, Heart, Image as ImageIcon, Video, Volume2, Trash2, X } from "lucide-react";
 import type { Asset } from "@/types/database";
 
 const TYPE_ICONS = { image: ImageIcon, video: Video, audio: Volume2 };
@@ -15,6 +15,7 @@ export default function LibraryPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "image" | "video" | "audio">("all");
+  const [expanded, setExpanded] = useState<Asset | null>(null);
 
   useEffect(() => {
     async function fetchAssets() {
@@ -83,7 +84,8 @@ export default function LibraryPage() {
             return (
               <div
                 key={asset.id}
-                className="group relative overflow-hidden rounded-lg border border-[var(--forja-border)] bg-[var(--forja-bg-elevated)]"
+                onClick={() => setExpanded(asset)}
+                className="group relative overflow-hidden rounded-lg border border-[var(--forja-border)] bg-[var(--forja-bg-elevated)] cursor-pointer"
               >
                 {asset.type === "image" ? (
                   <img src={asset.url} alt="" className="aspect-square w-full object-cover" />
@@ -121,6 +123,78 @@ export default function LibraryPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Modal de expansão */}
+      {expanded && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={() => setExpanded(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] w-full flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Fechar */}
+            <button
+              onClick={() => setExpanded(null)}
+              className="absolute -top-10 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--forja-bg-elevated)] border border-[var(--forja-border)] text-[var(--forja-text-muted)] hover:text-[var(--forja-text)] transition-colors z-10"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {/* Mídia */}
+            {expanded.type === "image" ? (
+              <img
+                src={expanded.url}
+                alt=""
+                className="max-w-full max-h-[80vh] rounded-lg object-contain"
+              />
+            ) : expanded.type === "video" ? (
+              <video
+                src={expanded.url}
+                controls
+                autoPlay
+                className="max-w-full max-h-[80vh] rounded-lg"
+              />
+            ) : (
+              <audio src={expanded.url} controls autoPlay className="w-full max-w-lg" />
+            )}
+
+            {/* Ações */}
+            <div className="flex items-center gap-3 mt-4">
+              <a
+                href={expanded.url}
+                download
+                className="flex items-center gap-2 rounded-lg bg-[var(--forja-ember)] px-4 py-2 text-sm font-medium text-[var(--forja-bg)] hover:bg-[var(--forja-ember-hover)] transition-colors"
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </a>
+              <button
+                onClick={() => { toggleFavorite(expanded.id, expanded.is_favorite); setExpanded({ ...expanded, is_favorite: !expanded.is_favorite }); }}
+                className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm transition-colors ${
+                  expanded.is_favorite
+                    ? "border-[var(--forja-ember)] text-[var(--forja-ember)]"
+                    : "border-[var(--forja-border)] text-[var(--forja-text-muted)] hover:border-[var(--forja-ember)]"
+                }`}
+              >
+                <Heart className={`h-4 w-4 ${expanded.is_favorite ? "fill-[var(--forja-ember)]" : ""}`} />
+                {expanded.is_favorite ? "Favoritado" : "Favoritar"}
+              </button>
+              <button
+                onClick={() => { deleteAsset(expanded.id); setExpanded(null); }}
+                className="flex items-center gap-2 rounded-lg border border-[var(--forja-error)]/30 px-4 py-2 text-sm text-[var(--forja-error)] hover:bg-[var(--forja-error)]/10 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+                Deletar
+              </button>
+              <span className="text-xs text-[var(--forja-text-dim)] ml-2">
+                {new Date(expanded.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+              </span>
+            </div>
+          </div>
         </div>
       )}
     </div>
