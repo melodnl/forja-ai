@@ -60,35 +60,22 @@ export const kieProvider: AIProvider = {
     const apiKey = process.env.KIE_API_KEY;
     if (!apiKey) throw new Error("KIE_API_KEY não configurada");
 
-    // Tentar /jobs/recordInfo primeiro
+    // Tentar /jobs/recordInfo (funciona pra Seedance, Grok, Imagen, Ideogram)
     const response = await fetch(
       `${KIE_BASE}/jobs/recordInfo?taskId=${jobId}`,
       { headers: { Authorization: `Bearer ${apiKey}` } }
     );
 
     if (!response.ok) {
-      // Tentar endpoint de runway
-      const runwayRes = await fetch(
-        `${KIE_BASE}/runway/${jobId}`,
-        { headers: { Authorization: `Bearer ${apiKey}` } }
-      );
-      if (runwayRes.ok) {
-        const rd = await runwayRes.json();
-        if (rd.data?.status === "completed" || rd.data?.videoUrl) {
-          return { status: "completed", outputUrls: [rd.data.videoUrl] };
-        }
-        if (rd.data?.status === "failed") {
-          return { status: "failed", error: rd.data.error || "Falhou" };
-        }
-        return { status: "processing" };
-      }
-      throw new Error(`Kie.ai status error: ${response.status}`);
+      // Veo3 e Runway não suportam polling — dependem do webhook
+      return { status: "processing" };
     }
 
     const data = await response.json();
     const record = data.data;
 
-    if (!record) return { status: "processing" };
+    // recordInfo null = modelo usa webhook (Veo3/Runway)
+    if (!record || data.code === 422) return { status: "processing" };
 
     if (record.state === "success") {
       let urls: string[] = [];

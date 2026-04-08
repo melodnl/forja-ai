@@ -14,13 +14,13 @@ function getServiceClient() {
 export async function POST(req: Request) {
   try {
     const payload = await req.json();
+    console.log("[webhook/kie] Payload recebido:", JSON.stringify(payload).slice(0, 500));
 
-    // Kie.ai webhook pode enviar no formato:
-    // { taskId, state, resultJson, failMsg, ... }
+    // Extrair taskId — vários formatos possíveis
     const taskId = payload.taskId || payload.data?.taskId;
-    const state = payload.state || payload.status;
 
     if (!taskId) {
+      console.error("[webhook/kie] taskId ausente no payload");
       return NextResponse.json({ error: "taskId ausente" }, { status: 400 });
     }
 
@@ -37,25 +37,61 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false }, { status: 404 });
     }
 
-    if (state === "success") {
-      // Extrair URLs do resultJson
+    // Detectar sucesso — múltiplos formatos
+    const isSuccess =
+      payload.state === "success" ||
+      payload.status === "success" ||
+      payload.code === 200 ||
+      payload.data?.info?.resultUrls;
+
+    const isFail =
+      payload.state === "fail" ||
+      payload.state === "failed" ||
+      payload.status === "failed" ||
+      payload.status === "error" ||
+      payload.code === 400 ||
+      payload.code === 500 ||
+      payload.code === 501;
+
+    if (isSuccess) {
       let externalUrls: string[] = [];
 
+      // Formato /jobs: resultJson com resultUrls
       if (payload.resultJson) {
         try {
           const result = typeof payload.resultJson === "string"
             ? JSON.parse(payload.resultJson)
             : payload.resultJson;
           externalUrls = result.resultUrls || [];
-        } catch {
-          externalUrls = [];
+        } catch {}
+      }
+
+      // Formato Veo 3: data.info.resultUrls (pode ser string ou array)
+      if (externalUrls.length === 0 && payload.data?.info?.resultUrls) {
+        const raw = payload.data.info.resultUrls;
+        if (Array.isArray(raw)) {
+          externalUrls = raw;
+        } else if (typeof raw === "string") {
+          // Pode vir como "[url1, url2]" string
+          try {
+            externalUrls = JSON.parse(raw);
+          } catch {
+            externalUrls = [raw];
+          }
         }
       }
 
-      // Fallback: tentar outros formatos
+      // Formato Runway: data.videoUrl
+      if (externalUrls.length === 0 && payload.data?.videoUrl) {
+        externalUrls = [payload.data.videoUrl];
+      }
+
+      // Fallback genérico
       if (externalUrls.length === 0) {
         externalUrls = payload.output?.urls || payload.urls || [];
       }
+
+      console.log("[webhook/kie] URLs encontradas:", externalUrls.length);
 
       // Baixar e armazenar no Supabase Storage
       const storedUrls: string[] = [];
@@ -70,7 +106,7 @@ export async function POST(req: Request) {
           storedUrls.push(url);
         } catch (err) {
           console.error("[webhook/kie] Erro no upload:", err);
-          storedUrls.push(externalUrls[i]);
+          storedUrls.push(externalUrls[i]); // fallback: URL original
         }
       }
 
@@ -91,7 +127,11 @@ export async function POST(req: Request) {
           url,
         });
       }
-    } else if (state === "fail" || state === "failed" || state === "error") {
+
+      console.log("[webhook/kie] Geração completada:", generation.id);
+    } else if (isFail) {
+      const errorMsg = payload.failMsg || payload.msg || payload.error || payload.data?.error || "Geração falhou";
+
       await refundCredits(
         generation.user_id,
         generation.model as CreditModel,
@@ -102,10 +142,14 @@ export async function POST(req: Request) {
         .from("generations")
         .update({
           status: "failed",
-          error_message: payload.failMsg || payload.error || "Geração falhou",
+          error_message: errorMsg,
           completed_at: new Date().toISOString(),
         })
         .eq("id", generation.id);
+
+      console.log("[webhook/kie] Geração falhou:", generation.id, errorMsg);
+    } else {
+      console.log("[webhook/kie] Status desconhecido, ignorando:", payload.state || payload.status || payload.code);
     }
 
     return NextResponse.json({ ok: true });
