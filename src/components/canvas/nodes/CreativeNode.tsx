@@ -445,35 +445,11 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
           </div>
         )}
 
-        {/* Resultado — galeria de outputs */}
-        {nodeData.outputUrls && nodeData.outputUrls.length > 0 && (
-          <div className="flex flex-col gap-2 rounded-lg bg-[var(--forja-bg)] border border-[var(--forja-border)] p-2">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[10px] font-medium text-[var(--forja-success)] flex items-center gap-1">
-                <CheckCircle className="h-3 w-3" />
-                {nodeData.outputUrls.length} resultado(s)
-              </span>
-              <span className="text-[10px] text-[var(--forja-text-dim)]">{elapsed > 0 ? `${elapsed}s` : ""}</span>
-            </div>
-            <div className={`grid gap-1.5 ${nodeData.outputUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-              {nodeData.outputUrls.map((url, i) => (
-                <div key={i} className="relative group/img rounded-md overflow-hidden">
-                  {isVideo ? (
-                    <video src={url} controls className="w-full rounded-md max-h-40 bg-black" />
-                  ) : (
-                    <img src={url} alt={`Resultado ${i + 1}`} className="w-full rounded-md object-cover max-h-40" />
-                  )}
-                  <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
-                    <a href={url} download className="rounded bg-black/70 p-1 hover:bg-black/90">
-                      <Download className="h-3 w-3 text-white" />
-                    </a>
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="rounded bg-black/70 p-1 hover:bg-black/90">
-                      <ExternalLink className="h-3 w-3 text-white" />
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Status concluído */}
+        {nodeData.status === "completed" && nodeData.outputUrls && nodeData.outputUrls.length > 0 && (
+          <div className="flex items-center gap-1.5 text-[var(--forja-success)] text-xs">
+            <CheckCircle className="h-3.5 w-3.5" />
+            {nodeData.outputUrls.length} resultado(s) — veja no card ao lado
           </div>
         )}
 
