@@ -27,6 +27,7 @@ const VIDEO_MODELS = [
   { value: "veo3-lite", label: "Veo 3 Lite" },
   { value: "runway", label: "Runway Gen-4" },
   { value: "grok-video", label: "Grok Video" },
+  { value: "sora-2-characters", label: "Sora 2 Characters (UGC)" },
 ];
 
 const ALL_MODELS = [...IMAGE_MODELS, ...VIDEO_MODELS];
