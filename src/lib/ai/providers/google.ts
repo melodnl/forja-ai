@@ -4,17 +4,17 @@ import { createClient } from "@supabase/supabase-js";
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
 const IMAGE_MODELS: Record<string, string> = {
-  "nano-banana-2": "gemini-2.0-flash-preview-image-generation",
-  "nano-banana-pro": "gemini-2.5-pro-preview-06-05",
-  "nano-banana": "gemini-2.0-flash-exp",
-  "imagen4-fast": "imagen-4.0-generate-preview-05-20",
-  "imagen4": "imagen-4.0-generate-preview-05-20",
-  "imagen4-ultra": "imagen-4.0-ultra-generate-exp-05-20",
+  "nano-banana-2": "gemini-3.1-flash-image-preview",
+  "nano-banana-pro": "gemini-3-pro-image-preview",
+  "nano-banana": "gemini-2.5-flash-image",
+  "imagen4-fast": "imagen-4.0-fast-generate-001",
+  "imagen4": "imagen-4.0-generate-001",
+  "imagen4-ultra": "imagen-4.0-ultra-generate-001",
 };
 
 const VIDEO_MODELS: Record<string, string> = {
-  "veo3": "veo-3.0-generate-preview",
-  "veo3-fast": "veo-3.0-generate-preview",
+  "veo3": "veo-3.0-generate-001",
+  "veo3-fast": "veo-3.0-fast-generate-001",
 };
 
 // Resultados síncronos ficam aqui pra polling
