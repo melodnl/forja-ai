@@ -71,10 +71,11 @@ export function ForgeCanvas({ boardId }: { boardId: string }) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Delete" || e.key === "Backspace") {
+        const tag = (e.target as HTMLElement)?.tagName;
+        const isEditable = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target as HTMLElement)?.isContentEditable;
+        if (isEditable) return;
         const { selectedNodeId } = useCanvasStore.getState();
-        if (selectedNodeId && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
-          deleteNode(selectedNodeId);
-        }
+        if (selectedNodeId) deleteNode(selectedNodeId);
       }
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
