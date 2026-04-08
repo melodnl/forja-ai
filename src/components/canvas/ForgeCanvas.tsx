@@ -156,6 +156,7 @@ export function ForgeCanvas({ boardId }: { boardId: string }) {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={{ type: "animated", animated: true }}
+        deleteKeyCode={null}
         fitView
         proOptions={{ hideAttribution: true }}
         className="bg-[var(--canvas-bg)]"
