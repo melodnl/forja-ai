@@ -138,6 +138,14 @@ export function useGeneration() {
           return;
         }
 
+        // Se resultado já veio imediato (Google)
+        if (data.status === "completed" && data.outputUrls?.length) {
+          updateNodeData(nodeId, { status: "completed", outputUrls: data.outputUrls });
+          createOutputNodes(nodeId, data.outputUrls, isVideo);
+          toast.success("Geração concluída!");
+          return;
+        }
+
         toast.info("Geração iniciada...");
         startPolling(data.generationId, nodeId, isVideo);
       } catch {

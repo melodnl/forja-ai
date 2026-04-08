@@ -1,8 +1,8 @@
 import type { AIProvider, GenerateParams, JobStatus } from "@/types/ai";
+import { createClient } from "@supabase/supabase-js";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
-// Modelos de imagem via Gemini API
 const IMAGE_MODELS: Record<string, string> = {
   "nano-banana-2": "gemini-2.0-flash-preview-image-generation",
   "nano-banana-pro": "gemini-2.5-pro-preview-06-05",
@@ -12,14 +12,31 @@ const IMAGE_MODELS: Record<string, string> = {
   "imagen4-ultra": "imagen-4.0-ultra-generate-exp-05-20",
 };
 
-// Modelos de vídeo via Gemini API
 const VIDEO_MODELS: Record<string, string> = {
   "veo3": "veo-3.0-generate-preview",
   "veo3-fast": "veo-3.0-generate-preview",
 };
 
-// Cache pra resultados (Google retorna síncrono pra imagem)
+// Resultados síncronos ficam aqui pra polling
 const resultCache = new Map<string, { urls: string[]; type: "image" | "video" }>();
+
+function getServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+async function uploadBase64ToStorage(base64Data: string, mimeType: string, userId: string): Promise<string> {
+  const supabase = getServiceClient();
+  const ext = mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
+  const path = `${userId}/google-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
+
+  const buffer = Buffer.from(base64Data, "base64");
+  await supabase.storage.from("generations").upload(path, buffer, { contentType: mimeType, upsert: true });
+  const { data } = supabase.storage.from("generations").getPublicUrl(path);
+  return data.publicUrl;
+}
 
 export const googleProvider: AIProvider = {
   name: "google",
@@ -31,27 +48,25 @@ export const googleProvider: AIProvider = {
     const isVideo = !!VIDEO_MODELS[params.model];
     const isImagen = params.model.startsWith("imagen4");
 
-    if (isImagen) {
-      return generateImagen(apiKey, params);
-    }
-
     if (isVideo) {
       return generateVeo(apiKey, params);
     }
 
-    // Nano Banana (Gemini com geração de imagem nativa)
+    if (isImagen) {
+      return generateImagen(apiKey, params);
+    }
+
     return generateGeminiImage(apiKey, params);
   },
 
   async getStatus(jobId: string): Promise<JobStatus> {
-    // Imagens são síncronas — resultado já está no cache
     const cached = resultCache.get(jobId);
     if (cached) {
       resultCache.delete(jobId);
       return { status: "completed", outputUrls: cached.urls };
     }
 
-    // Veo pode ser assíncrono — checar operação
+    // Veo pode ser assíncrono
     const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
     if (!apiKey) return { status: "processing" };
 
@@ -73,7 +88,7 @@ export const googleProvider: AIProvider = {
   },
 };
 
-// Gemini nativo (Nano Banana) — gera imagem via chat
+// Gemini nativo (Nano Banana)
 async function generateGeminiImage(apiKey: string, params: GenerateParams): Promise<{ jobId: string }> {
   const model = IMAGE_MODELS[params.model] || "gemini-2.0-flash-preview-image-generation";
 
@@ -102,11 +117,20 @@ async function generateGeminiImage(apiKey: string, params: GenerateParams): Prom
   const parts = data.candidates?.[0]?.content?.parts || [];
   const imageUrls: string[] = [];
 
+  // Upload base64 pro Supabase Storage
   for (const part of parts) {
     if (part.inlineData) {
-      // Base64 image — converter pra data URL
-      const dataUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-      imageUrls.push(dataUrl);
+      try {
+        const url = await uploadBase64ToStorage(
+          part.inlineData.data,
+          part.inlineData.mimeType || "image/png",
+          "google-gen"
+        );
+        imageUrls.push(url);
+      } catch {
+        // Fallback: data URL
+        imageUrls.push(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`);
+      }
     }
   }
 
@@ -118,7 +142,7 @@ async function generateGeminiImage(apiKey: string, params: GenerateParams): Prom
   return { jobId };
 }
 
-// Imagen 4 — API dedicada
+// Imagen 4
 async function generateImagen(apiKey: string, params: GenerateParams): Promise<{ jobId: string }> {
   const model = IMAGE_MODELS[params.model] || "imagen-4.0-generate-preview-05-20";
 
@@ -144,9 +168,22 @@ async function generateImagen(apiKey: string, params: GenerateParams): Promise<{
 
   const data = await res.json();
   const predictions = data.predictions || [];
-  const imageUrls = predictions.map((p: { bytesBase64Encoded: string; mimeType: string }) =>
-    `data:${p.mimeType || "image/png"};base64,${p.bytesBase64Encoded}`
-  );
+  const imageUrls: string[] = [];
+
+  for (const p of predictions) {
+    if (p.bytesBase64Encoded) {
+      try {
+        const url = await uploadBase64ToStorage(
+          p.bytesBase64Encoded,
+          p.mimeType || "image/png",
+          "google-gen"
+        );
+        imageUrls.push(url);
+      } catch {
+        imageUrls.push(`data:${p.mimeType || "image/png"};base64,${p.bytesBase64Encoded}`);
+      }
+    }
+  }
 
   const jobId = `google-img-${Date.now()}`;
   if (imageUrls.length > 0) {
@@ -156,7 +193,7 @@ async function generateImagen(apiKey: string, params: GenerateParams): Promise<{
   return { jobId };
 }
 
-// Veo 3 — geração de vídeo (pode ser assíncrona)
+// Veo 3
 async function generateVeo(apiKey: string, params: GenerateParams): Promise<{ jobId: string }> {
   const model = VIDEO_MODELS[params.model] || "veo-3.0-generate-preview";
 
@@ -166,9 +203,7 @@ async function generateVeo(apiKey: string, params: GenerateParams): Promise<{ jo
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        instances: [{
-          prompt: params.prompt,
-        }],
+        instances: [{ prompt: params.prompt }],
         parameters: {
           aspectRatio: params.aspectRatio || "16:9",
           personGeneration: "allow_all",
@@ -183,14 +218,12 @@ async function generateVeo(apiKey: string, params: GenerateParams): Promise<{ jo
   }
 
   const data = await res.json();
-  // Retorna operation name pra polling
   const operationName = data.name;
 
   if (operationName) {
     return { jobId: operationName };
   }
 
-  // Se retornou resultado direto
   if (data.response?.generatedVideos) {
     const urls = data.response.generatedVideos.map((v: { video: { uri: string } }) => v.video.uri);
     const jobId = `google-veo-${Date.now()}`;

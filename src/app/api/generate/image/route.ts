@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { z } from "zod/v4";
-import { generateWithProvider, getGenerationType } from "@/lib/ai/orchestrator";
+import { generateWithProvider, getGenerationType, getJobStatus } from "@/lib/ai/orchestrator";
 import { validateAndDebitCredits } from "@/lib/ai/credits";
 import type { CreditModel } from "@/lib/utils/credits";
 
@@ -108,7 +108,48 @@ export async function POST(req: Request) {
         provider,
       });
 
-      // Atualizar geração com job ID e provider
+      // Checar se resultado já está disponível (providers síncronos como Google)
+      let immediateUrls: string[] | null = null;
+      try {
+        const immediateStatus = await getJobStatus(usedProvider, jobId);
+        if (immediateStatus.status === "completed" && immediateStatus.outputUrls?.length) {
+          immediateUrls = immediateStatus.outputUrls;
+        }
+      } catch {}
+
+      if (immediateUrls) {
+        // Resultado já disponível — salvar direto
+        await supabase
+          .from("generations")
+          .update({
+            external_job_id: jobId,
+            provider: usedProvider,
+            status: "completed",
+            output_urls: immediateUrls,
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", generation.id);
+
+        // Salvar assets
+        for (const url of immediateUrls) {
+          await supabase.from("assets").insert({
+            user_id: user.id,
+            generation_id: generation.id,
+            type: genType,
+            url,
+          });
+        }
+
+        return NextResponse.json({
+          generationId: generation.id,
+          jobId,
+          provider: usedProvider,
+          status: "completed",
+          outputUrls: immediateUrls,
+        });
+      }
+
+      // Resultado assíncrono — aguardar polling/webhook
       await supabase
         .from("generations")
         .update({
