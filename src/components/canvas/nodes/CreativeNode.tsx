@@ -57,15 +57,24 @@ const MODELS_BY_PROVIDER: Record<string, { image: { value: string; label: string
 const ALL_VIDEO_VALUES = Object.values(MODELS_BY_PROVIDER).flatMap((p) => p.video.map((m) => m.value));
 
 const ASPECT_RATIOS = [
+  { value: "9:16", label: "Portrait (9:16)" },
+  { value: "16:9", label: "Landscape (16:9)" },
   { value: "1:1", label: "Quadrado (1:1)" },
-  { value: "9:16", label: "Retrato (9:16)" },
-  { value: "16:9", label: "Paisagem (16:9)" },
-  { value: "4:5", label: "Retrato (4:5)" },
-  { value: "3:4", label: "Retrato (3:4)" },
-  { value: "4:3", label: "Paisagem (4:3)" },
+  { value: "4:5", label: "Portrait (4:5)" },
+  { value: "3:4", label: "Portrait (3:4)" },
+  { value: "4:3", label: "Landscape (4:3)" },
 ];
 
-const DURATIONS = ["5s", "10s", "15s", "30s", "60s"];
+const N_FRAMES = [
+  { value: "10s", label: "10s" },
+  { value: "15s", label: "15s" },
+];
+
+const SIZES = [
+  { value: "standard", label: "Standard" },
+  { value: "high", label: "High" },
+];
+
 const FORMATS_IMAGE = ["png", "jpg", "webp"];
 const API_PROVIDERS = [
   { value: "kie", label: "KieAI" },
@@ -220,34 +229,97 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
           <p className="text-[10px] text-[var(--forja-text-dim)] italic">Conecte 1 imagem como primeiro frame e/ou use o prompt para descrever o vídeo.</p>
         )}
 
-        {/* Aspect Ratio */}
+        {/* aspect_ratio — toggle buttons */}
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">Aspect ratio</label>
-          <select value={nodeData.aspectRatio || "9:16"} onChange={(e) => handleChange("aspectRatio", e.target.value)}
-            className="rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-2 text-xs text-[var(--forja-text)] focus:border-[var(--forja-ember)] focus:outline-none">
-            {ASPECT_RATIOS.map((r) => (<option key={r.value} value={r.value}>{r.label}</option>))}
-          </select>
+          <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">aspect_ratio</label>
+          <div className="flex gap-1.5">
+            {[{ value: "9:16", label: "Portrait" }, { value: "16:9", label: "Landscape" }].map((r) => (
+              <button key={r.value} onClick={() => handleChange("aspectRatio", r.value)}
+                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  (nodeData.aspectRatio || "9:16") === r.value
+                    ? "bg-[var(--forja-ember)] text-[var(--forja-bg)]"
+                    : "bg-[var(--forja-bg)] text-[var(--forja-text-muted)] border border-[var(--forja-border)] hover:border-[var(--forja-ember)]"
+                }`}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[9px] text-[var(--forja-text-dim)]">This parameter defines the aspect ratio of the image.</p>
         </div>
 
-        {/* Duração (vídeo) */}
+        {/* n_frames — toggle (só vídeo) */}
         {isVideo && (
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">Duração</label>
-            <select value={duration} onChange={(e) => handleChange("duration", e.target.value)}
-              className="rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-2 text-xs text-[var(--forja-text)] focus:border-[var(--forja-ember)] focus:outline-none">
-              {DURATIONS.map((d) => (<option key={d} value={d}>{d}</option>))}
-            </select>
+            <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">n_frames</label>
+            <div className="flex gap-1.5">
+              {N_FRAMES.map((f) => (
+                <button key={f.value} onClick={() => handleChange("duration", f.value)}
+                  className={`rounded-md px-4 py-1.5 text-xs font-medium transition-colors ${
+                    (duration) === f.value
+                      ? "bg-[var(--forja-ember)] text-[var(--forja-bg)]"
+                      : "bg-[var(--forja-bg)] text-[var(--forja-text-muted)] border border-[var(--forja-border)] hover:border-[var(--forja-ember)]"
+                  }`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[9px] text-[var(--forja-text-dim)]">The number of frames to be generated.</p>
           </div>
         )}
 
-        {/* Resolução (imagem) */}
+        {/* size — toggle */}
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">size</label>
+          <div className="flex gap-1.5">
+            {SIZES.map((s) => (
+              <button key={s.value} onClick={() => handleChange("resolution", s.value)}
+                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  (nodeData.resolution || "standard") === s.value
+                    ? "bg-[var(--forja-ember)] text-[var(--forja-bg)]"
+                    : "bg-[var(--forja-bg)] text-[var(--forja-text-muted)] border border-[var(--forja-border)] hover:border-[var(--forja-ember)]"
+                }`}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[9px] text-[var(--forja-text-dim)]">The quality or size of the generated {isVideo ? "video" : "image"}.</p>
+        </div>
+
+        {/* remove_watermark — toggle (só vídeo) */}
+        {isVideo && (
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">remove_watermark</label>
+              <p className="text-[9px] text-[var(--forja-text-dim)]">When enabled, removes watermarks from the generated video.</p>
+            </div>
+            <button
+              onClick={() => handleChange("removeWatermark", (nodeData as unknown as Record<string, unknown>).removeWatermark ? "" : "true")}
+              className={`relative h-5 w-9 rounded-full transition-colors ${
+                (nodeData as unknown as Record<string, unknown>).removeWatermark ? "bg-[var(--forja-ember)]" : "bg-[var(--forja-border-strong)]"
+              }`}>
+              <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                (nodeData as unknown as Record<string, unknown>).removeWatermark ? "translate-x-4" : "translate-x-0.5"
+              }`} />
+            </button>
+          </div>
+        )}
+
+        {/* Formato (só imagem) */}
         {!isVideo && (
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">Resolução</label>
-            <select value={nodeData.resolution || "1K"} onChange={(e) => handleChange("resolution", e.target.value)}
-              className="rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-2 text-xs text-[var(--forja-text)] focus:border-[var(--forja-ember)] focus:outline-none">
-              {["512p", "1K", "2K", "4K"].map((r) => (<option key={r} value={r}>{r}</option>))}
-            </select>
+            <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">format</label>
+            <div className="flex gap-1.5">
+              {FORMATS_IMAGE.map((f) => (
+                <button key={f} onClick={() => handleChange("format", f)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    (nodeData.format || "png") === f
+                      ? "bg-[var(--forja-ember)] text-[var(--forja-bg)]"
+                      : "bg-[var(--forja-bg)] text-[var(--forja-text-muted)] border border-[var(--forja-border)] hover:border-[var(--forja-ember)]"
+                  }`}>
+                  {f.toUpperCase()}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -264,17 +336,6 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
             {API_PROVIDERS.map((p) => (<option key={p.value} value={p.value}>{p.label}</option>))}
           </select>
         </div>
-
-        {/* Formato (imagem) */}
-        {!isVideo && (
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">Formato</label>
-            <select value={nodeData.format || "png"} onChange={(e) => handleChange("format", e.target.value)}
-              className="rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-2 text-xs text-[var(--forja-text)] focus:border-[var(--forja-ember)] focus:outline-none">
-              {FORMATS_IMAGE.map((f) => (<option key={f} value={f}>{f.toUpperCase()}</option>))}
-            </select>
-          </div>
-        )}
 
         {/* Prompt */}
         <div className="flex flex-col gap-1">
