@@ -98,11 +98,13 @@ export const kieProvider: AIProvider = {
       });
       if (veoRes.ok) {
         const veoData = await veoRes.json();
-        if (veoData.code === 200 && veoData.data?.resultUrls) {
+        // Sucesso: code 200 OU code 422 com resultUrls presentes
+        const hasUrls = veoData.data?.resultUrls && veoData.data.resultUrls.length > 0;
+        if (hasUrls) {
           const urls = Array.isArray(veoData.data.resultUrls) ? veoData.data.resultUrls : [veoData.data.resultUrls];
           return { status: "completed", outputUrls: urls };
         }
-        // 422 = still processing
+        // Sem URLs = still processing
         return { status: "processing" };
       }
     } catch {}
