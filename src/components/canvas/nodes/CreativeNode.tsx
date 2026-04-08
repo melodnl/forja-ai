@@ -229,22 +229,13 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
           <p className="text-[10px] text-[var(--forja-text-dim)] italic">Conecte 1 imagem como primeiro frame e/ou use o prompt para descrever o vídeo.</p>
         )}
 
-        {/* aspect_ratio — toggle buttons */}
+        {/* Aspect Ratio */}
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">aspect_ratio</label>
-          <div className="flex gap-1.5">
-            {[{ value: "9:16", label: "Portrait" }, { value: "16:9", label: "Landscape" }].map((r) => (
-              <button key={r.value} onClick={() => handleChange("aspectRatio", r.value)}
-                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                  (nodeData.aspectRatio || "9:16") === r.value
-                    ? "bg-[var(--forja-ember)] text-[var(--forja-bg)]"
-                    : "bg-[var(--forja-bg)] text-[var(--forja-text-muted)] border border-[var(--forja-border)] hover:border-[var(--forja-ember)]"
-                }`}>
-                {r.label}
-              </button>
-            ))}
-          </div>
-          <p className="text-[9px] text-[var(--forja-text-dim)]">This parameter defines the aspect ratio of the image.</p>
+          <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">Aspect ratio</label>
+          <select value={nodeData.aspectRatio || "9:16"} onChange={(e) => handleChange("aspectRatio", e.target.value)}
+            className="rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-2 text-xs text-[var(--forja-text)] focus:border-[var(--forja-ember)] focus:outline-none">
+            {ASPECT_RATIOS.map((r) => (<option key={r.value} value={r.value}>{r.label}</option>))}
+          </select>
         </div>
 
         {/* n_frames — toggle (só vídeo) */}
