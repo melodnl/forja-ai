@@ -358,8 +358,9 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
             </div>
           </div>
           <textarea value={nodeData.prompt || ""} onChange={(e) => handleChange("prompt", e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
             placeholder="Descreva o que você quer gerar..." rows={4}
-            className="w-full resize-none rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2.5 py-2 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none leading-relaxed" />
+            className="nodrag nowheel w-full resize-none rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2.5 py-2 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none leading-relaxed" />
         </div>
 
         {/* Variantes */}

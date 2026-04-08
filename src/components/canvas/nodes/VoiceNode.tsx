@@ -108,8 +108,9 @@ function VoiceNodeComponent({ id, data, selected }: NodeProps) {
           <input
             value={nodeData.voice || ""}
             onChange={(e) => handleChange("voice", e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
             placeholder="ID da voz..."
-            className="rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-1.5 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none"
+            className="nodrag nowheel rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-1.5 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none"
           />
         </div>
 
@@ -143,9 +144,10 @@ function VoiceNodeComponent({ id, data, selected }: NodeProps) {
         <textarea
           value={nodeData.text || ""}
           onChange={(e) => handleChange("text", e.target.value)}
+          onKeyDown={(e) => e.stopPropagation()}
           placeholder="Texto para converter em voz..."
           rows={3}
-          className="w-full resize-none rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-1.5 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none"
+          className="nodrag nowheel w-full resize-none rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-1.5 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none"
         />
 
         {/* Audio player */}

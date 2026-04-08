@@ -165,9 +165,10 @@ function CopyNodeComponent({ id, data, selected }: NodeProps) {
           <textarea
             value={nodeData.briefing || ""}
             onChange={(e) => handleChange("briefing", e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
             placeholder="Descreva o produto, público-alvo, oferta..."
             rows={3}
-            className="w-full resize-none rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-1.5 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none"
+            className="nodrag nowheel w-full resize-none rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-1.5 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none"
           />
         </div>
 
@@ -178,7 +179,8 @@ function CopyNodeComponent({ id, data, selected }: NodeProps) {
             type="number" min={1} max={10}
             value={nodeData.variations || 3}
             onChange={(e) => handleChange("variations", parseInt(e.target.value) || 3)}
-            className="w-14 rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-1 text-xs text-[var(--forja-text)] text-center focus:border-[var(--forja-ember)] focus:outline-none"
+            onKeyDown={(e) => e.stopPropagation()}
+            className="nodrag nowheel w-14 rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-1 text-xs text-[var(--forja-text)] text-center focus:border-[var(--forja-ember)] focus:outline-none"
           />
         </div>
 

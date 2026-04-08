@@ -260,10 +260,10 @@ function AssistantNodeComponent({ id, data, selected }: NodeProps) {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onKeyDown={(e) => { e.stopPropagation(); handleKeyDown(e); }}
             placeholder="Envie uma mensagem..."
             disabled={loading}
-            className="flex-1 rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-3 py-1.5 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none disabled:opacity-50"
+            className="nodrag nowheel flex-1 rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-3 py-1.5 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none disabled:opacity-50"
           />
           <button
             onClick={() => handleSend()}

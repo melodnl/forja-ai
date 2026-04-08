@@ -85,9 +85,10 @@ function PromptNodeComponent({ id, data, selected }: NodeProps) {
         <textarea
           value={nodeData.text || ""}
           onChange={handleTextChange}
+          onKeyDown={(e) => e.stopPropagation()}
           placeholder="Descreva o que você quer criar..."
           rows={4}
-          className="w-full resize-none rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-3 py-2 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none transition-colors"
+          className="nodrag nowheel w-full resize-none rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-3 py-2 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none transition-colors"
         />
         <div className="mt-1 text-right text-[10px] text-[var(--forja-text-dim)]">
           {(nodeData.text || "").length} caracteres
