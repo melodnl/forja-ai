@@ -60,42 +60,54 @@ export const kieProvider: AIProvider = {
     const apiKey = process.env.KIE_API_KEY;
     if (!apiKey) throw new Error("KIE_API_KEY não configurada");
 
-    // Tentar /jobs/recordInfo (funciona pra Seedance, Grok, Imagen, Ideogram)
+    // 1. Tentar /jobs/recordInfo (Seedance, Grok, Imagen, Ideogram)
     const response = await fetch(
       `${KIE_BASE}/jobs/recordInfo?taskId=${jobId}`,
       { headers: { Authorization: `Bearer ${apiKey}` } }
     );
 
-    if (!response.ok) {
-      // Veo3 e Runway não suportam polling — dependem do webhook
-      return { status: "processing" };
-    }
+    if (response.ok) {
+      const data = await response.json();
+      const record = data.data;
 
-    const data = await response.json();
-    const record = data.data;
-
-    // recordInfo null = modelo usa webhook (Veo3/Runway)
-    if (!record || data.code === 422) return { status: "processing" };
-
-    if (record.state === "success") {
-      let urls: string[] = [];
-      if (record.resultJson) {
-        try {
-          const result = typeof record.resultJson === "string"
-            ? JSON.parse(record.resultJson)
-            : record.resultJson;
-          urls = result.resultUrls || [];
-        } catch {
-          urls = [];
+      // recordInfo null ou 422 = tentar Veo polling
+      if (record && data.code !== 422 && record.state) {
+        if (record.state === "success") {
+          let urls: string[] = [];
+          if (record.resultJson) {
+            try {
+              const result = typeof record.resultJson === "string" ? JSON.parse(record.resultJson) : record.resultJson;
+              urls = result.resultUrls || [];
+            } catch {}
+          }
+          return { status: "completed", outputUrls: urls };
         }
+        if (record.state === "fail") {
+          return { status: "failed", error: record.failMsg || "Geração falhou" };
+        }
+        return { status: "processing" };
       }
-      return { status: "completed", outputUrls: urls };
     }
 
-    if (record.state === "fail") {
-      return { status: "failed", error: record.failMsg || "Geração falhou" };
-    }
+    // 2. Tentar Veo 3 polling via /veo/get-4k-video
+    try {
+      const veoRes = await fetch(`${KIE_BASE}/veo/get-4k-video`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: jobId }),
+      });
+      if (veoRes.ok) {
+        const veoData = await veoRes.json();
+        if (veoData.code === 200 && veoData.data?.resultUrls) {
+          const urls = Array.isArray(veoData.data.resultUrls) ? veoData.data.resultUrls : [veoData.data.resultUrls];
+          return { status: "completed", outputUrls: urls };
+        }
+        // 422 = still processing
+        return { status: "processing" };
+      }
+    } catch {}
 
+    // 3. Fallback: still processing
     return { status: "processing" };
   },
 };
