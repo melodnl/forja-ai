@@ -7,12 +7,7 @@ const VIDEO_MODELS = [
   "seedance-2",
   "seedance-2-fast",
   "seedance-1.5-pro",
-  "veo-3",
-  "kling-3",
-  "runway-gen-4",
-  "hailuo-02",
-  "wan-2-1",
-  "sora-2",
+  "grok-video",
 ];
 
 export function getGenerationType(model: string): "image" | "video" {

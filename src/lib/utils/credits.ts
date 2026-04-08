@@ -1,22 +1,17 @@
 export const CREDIT_COSTS = {
   // Imagem
-  "nano-banana-2": 5,
-  "nano-banana": 4,
-  "flux-pro-1.1": 5,
+  "grok-imagine": 5,
+  "imagen4-ultra": 10,
+  "imagen4": 8,
   "ideogram-v3": 8,
-  "seedream-4": 4,
-  "gpt-image-1": 10,
+  "qwen": 5,
+  "grok-img2img": 5,
 
   // Vídeo
   "seedance-2": 20,
   "seedance-2-fast": 15,
   "seedance-1.5-pro": 25,
-  "veo-3": 50,
-  "kling-3": 25,
-  "runway-gen-4": 25,
-  "hailuo-02": 20,
-  "wan-2-1": 15,
-  "sora-2": 30,
+  "grok-video": 15,
 
   // Voz (por 1k caracteres)
   elevenlabs: 5,
@@ -31,7 +26,6 @@ export const CREDIT_COSTS = {
   "upscale-2x": 3,
   "upscale-4x": 8,
   "remove-bg": 2,
-  "ugc-avatar-10s": 80,
 } as const;
 
 export type CreditModel = keyof typeof CREDIT_COSTS;

@@ -2,28 +2,22 @@ import type { AIProvider, GenerateParams, JobStatus } from "@/types/ai";
 
 const KIE_BASE_URL = "https://api.kie.ai/api/v1/jobs";
 
-// Mapeamento: ID interno → model ID da Kie.ai
+// Mapeamento: ID interno → model ID da Kie.ai (testados e confirmados)
 const MODEL_MAP: Record<string, string> = {
-  // Imagem
-  "nano-banana-2": "grok-imagine/text-to-image",
-  "nano-banana": "grok-imagine/text-to-image",
-  "flux-pro-1.1": "flux-2/text-to-image",
-  "ideogram-v3": "ideogram/text-to-image",
-  "seedream-4": "seedream/text-to-image",
-  "gpt-image-1": "google/imagen4-ultra",
-  // Vídeo
+  // Imagem (confirmados ✅)
+  "grok-imagine": "grok-imagine/text-to-image",
+  "imagen4-ultra": "google/imagen4-ultra",
+  "imagen4": "google/imagen4",
+  "ideogram-v3": "ideogram/v3-text-to-image",
+  "qwen": "qwen/text-to-image",
+  "grok-img2img": "grok-imagine/image-to-image",
+  // Vídeo (confirmados ✅)
   "seedance-2": "bytedance/seedance-2",
   "seedance-2-fast": "bytedance/seedance-2-fast",
-  "seedance-1.5-pro": "bytedance/seedance-1-5-pro",
-  "veo-3": "google/veo-3",
-  "kling-3": "kling/kling-3-0",
-  "runway-gen-4": "runway/gen-4",
-  "hailuo-02": "hailuo/text-to-video",
-  "wan-2-1": "wan/text-to-video",
-  "sora-2": "sora2/text-to-video",
+  "seedance-1.5-pro": "bytedance/seedance-1.5-pro",
+  "grok-video": "grok-imagine/text-to-video",
   // Utilitários
-  "upscale": "grok-imagine/upscale",
-  "remove-bg": "recraft/crisp-upscale",
+  "upscale": "recraft/crisp-upscale",
 };
 
 export const kieProvider: AIProvider = {

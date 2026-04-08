@@ -11,24 +11,18 @@ import type { CreativeNodeData } from "@/types/nodes";
 import { NodeDeleteButton } from "./NodeWrapper";
 
 const IMAGE_MODELS = [
-  { value: "nano-banana-2", label: "Nano Banana 2" },
-  { value: "nano-banana", label: "Nano Banana" },
-  { value: "flux-pro-1.1", label: "Flux 1.1 Pro" },
+  { value: "grok-imagine", label: "Grok Imagine" },
+  { value: "imagen4-ultra", label: "Google Imagen 4 Ultra" },
+  { value: "imagen4", label: "Google Imagen 4" },
   { value: "ideogram-v3", label: "Ideogram v3" },
-  { value: "seedream-4", label: "Seedream 4" },
-  { value: "gpt-image-1", label: "GPT Image" },
+  { value: "qwen", label: "Qwen" },
 ];
 
 const VIDEO_MODELS = [
   { value: "seedance-2", label: "Seedance 2.0 (UGC/Lip Sync)" },
   { value: "seedance-2-fast", label: "Seedance 2.0 Fast" },
   { value: "seedance-1.5-pro", label: "Seedance 1.5 Pro" },
-  { value: "veo-3", label: "Veo 3" },
-  { value: "kling-3", label: "Kling 3.0" },
-  { value: "runway-gen-4", label: "Runway Gen-4" },
-  { value: "hailuo-02", label: "Hailuo" },
-  { value: "wan-2-1", label: "Wan 2.1" },
-  { value: "sora-2", label: "Sora 2 (descontinuando)" },
+  { value: "grok-video", label: "Grok Video" },
 ];
 
 const ALL_MODELS = [...IMAGE_MODELS, ...VIDEO_MODELS];
