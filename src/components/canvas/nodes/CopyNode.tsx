@@ -6,7 +6,7 @@ import { FileText, Loader2, Copy, Check, ThumbsUp, Trophy } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas.store";
 import { toast } from "sonner";
 import type { CopyNodeData } from "@/types/nodes";
-import { NodeDeleteButton } from "./NodeWrapper";
+import { NodeDeleteButton, stopNodeKeyCapture } from "./NodeWrapper";
 
 const MODELS = [
   { value: "claude-sonnet-4-5", label: "Claude Sonnet 4.5" },
@@ -86,6 +86,7 @@ function CopyNodeComponent({ id, data, selected }: NodeProps) {
 
   return (
     <div
+      onKeyDown={stopNodeKeyCapture}
       className={`group/node w-80 rounded-lg border bg-[var(--canvas-node-bg)] transition-all duration-200 ${
         selected
           ? "border-[var(--forja-ember)] shadow-[0_0_24px_rgba(255,107,26,0.15)]"

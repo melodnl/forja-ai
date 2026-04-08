@@ -3,6 +3,15 @@
 import { Trash2 } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas.store";
 
+/** Impede React Flow de capturar teclas quando digitando em inputs dentro de nós */
+export function stopNodeKeyCapture(e: React.KeyboardEvent) {
+  const target = e.target as HTMLElement;
+  const tag = target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable) {
+    e.stopPropagation();
+  }
+}
+
 export function NodeDeleteButton({ nodeId }: { nodeId: string }) {
   const deleteNode = useCanvasStore((s) => s.deleteNode);
 

@@ -6,7 +6,7 @@ import { Mic, Loader2, Play, Pause } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas.store";
 import { toast } from "sonner";
 import type { VoiceNodeData } from "@/types/nodes";
-import { NodeDeleteButton } from "./NodeWrapper";
+import { NodeDeleteButton, stopNodeKeyCapture } from "./NodeWrapper";
 
 const PROVIDERS = [
   { value: "elevenlabs", label: "ElevenLabs" },
@@ -71,6 +71,7 @@ function VoiceNodeComponent({ id, data, selected }: NodeProps) {
 
   return (
     <div
+      onKeyDown={stopNodeKeyCapture}
       className={`group/node w-72 rounded-lg border bg-[var(--canvas-node-bg)] transition-all duration-200 ${
         selected
           ? "border-[var(--forja-ember)] shadow-[0_0_24px_rgba(255,107,26,0.15)]"

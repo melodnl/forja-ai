@@ -8,7 +8,7 @@ import { useGeneration } from "@/hooks/useGeneration";
 import { useNodeInputs } from "@/hooks/useNodeConnections";
 import { toast } from "sonner";
 import type { CreativeNodeData } from "@/types/nodes";
-import { NodeDeleteButton } from "./NodeWrapper";
+import { NodeDeleteButton, stopNodeKeyCapture } from "./NodeWrapper";
 
 // Modelos por provider
 const MODELS_BY_PROVIDER: Record<string, { image: { value: string; label: string }[]; video: { value: string; label: string }[] }> = {
@@ -196,7 +196,7 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
   }, [nodeData.prompt, modelValue, isVideo]);
 
   return (
-    <div className={`group/node w-80 rounded-lg border bg-[var(--canvas-node-bg)] transition-all duration-200 ${selected ? "border-[var(--forja-ember)] shadow-[0_0_24px_rgba(255,107,26,0.15)]" : "border-[var(--forja-border)]"}`}>
+    <div onKeyDown={stopNodeKeyCapture} className={`group/node w-80 rounded-lg border bg-[var(--canvas-node-bg)] transition-all duration-200 ${selected ? "border-[var(--forja-ember)] shadow-[0_0_24px_rgba(255,107,26,0.15)]" : "border-[var(--forja-border)]"}`}>
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-[var(--forja-border)] px-3 py-2">
         <Flame className="h-4 w-4 text-[var(--forja-ember)]" />

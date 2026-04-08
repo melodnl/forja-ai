@@ -6,7 +6,7 @@ import { Type, Sparkles, Loader2 } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas.store";
 import { toast } from "sonner";
 import type { PromptNodeData } from "@/types/nodes";
-import { NodeDeleteButton } from "./NodeWrapper";
+import { NodeDeleteButton, stopNodeKeyCapture } from "./NodeWrapper";
 
 function PromptNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as PromptNodeData;
@@ -48,6 +48,7 @@ function PromptNodeComponent({ id, data, selected }: NodeProps) {
 
   return (
     <div
+      onKeyDown={stopNodeKeyCapture}
       className={`group/node w-72 rounded-lg border bg-[var(--canvas-node-bg)] transition-all duration-200 ${
         selected
           ? "border-[var(--forja-ember)] shadow-[0_0_24px_rgba(255,107,26,0.15)]"
