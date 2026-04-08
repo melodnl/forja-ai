@@ -277,6 +277,49 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
           </div>
         </div>
 
+        {/* Custo estimado */}
+        <div className="flex items-center justify-between rounded-md bg-[var(--forja-bg)] border border-[var(--forja-border)] px-3 py-2">
+          <span className="text-[10px] text-[var(--forja-text-muted)]">Custo estimado</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-[var(--forja-text)]">
+              {(() => {
+                const costs: Record<string, { credits: number; usd: string }> = {
+                  "grok-imagine": { credits: 5, usd: "$0.02" },
+                  "imagen4-ultra": { credits: 10, usd: "$0.05" },
+                  "imagen4": { credits: 8, usd: "$0.04" },
+                  "ideogram-v3": { credits: 8, usd: "$0.04" },
+                  "qwen": { credits: 5, usd: "$0.02" },
+                  "seedance-2": { credits: 20, usd: "$0.80" },
+                  "seedance-2-fast": { credits: 15, usd: "$0.50" },
+                  "seedance-1.5-pro": { credits: 25, usd: "$1.00" },
+                  "veo3-fast": { credits: 30, usd: "$0.40" },
+                  "veo3-quality": { credits: 50, usd: "$0.80" },
+                  "veo3-lite": { credits: 15, usd: "$0.20" },
+                  "runway": { credits: 25, usd: "$0.50" },
+                  "grok-video": { credits: 15, usd: "$0.30" },
+                  "sora-2-characters": { credits: 30, usd: "$0.60" },
+                };
+                const c = costs[modelValue] || { credits: 5, usd: "$0.02" };
+                const total = c.credits * (nodeData.variants || 1);
+                return `${total} créditos`;
+              })()}
+            </span>
+            <span className="text-[10px] text-[var(--forja-text-dim)]">
+              ~{(() => {
+                const usdMap: Record<string, number> = {
+                  "grok-imagine": 0.02, "imagen4-ultra": 0.05, "imagen4": 0.04,
+                  "ideogram-v3": 0.04, "qwen": 0.02,
+                  "seedance-2": 0.80, "seedance-2-fast": 0.50, "seedance-1.5-pro": 1.00,
+                  "veo3-fast": 0.40, "veo3-quality": 0.80, "veo3-lite": 0.20,
+                  "runway": 0.50, "grok-video": 0.30, "sora-2-characters": 0.60,
+                };
+                const usd = (usdMap[modelValue] || 0.02) * (nodeData.variants || 1);
+                return `$${usd.toFixed(2)}`;
+              })()}
+            </span>
+          </div>
+        </div>
+
         {/* Progress bar durante geração */}
         {isGenerating && (
           <div className="flex flex-col gap-2 rounded-lg bg-[var(--forja-bg)] border border-[var(--forja-border)] p-3">
