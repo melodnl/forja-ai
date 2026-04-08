@@ -7,9 +7,15 @@ import { useCanvasStore } from "@/store/canvas.store";
 export function stopNodeKeyCapture(e: React.KeyboardEvent) {
   const target = e.target as HTMLElement;
   const tag = target.tagName;
-  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable) {
-    e.stopPropagation();
-  }
+  const isEditable = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
+
+  if (!isEditable) return;
+
+  // Deixar Ctrl/Meta combos passarem (Ctrl+Z, Ctrl+S, Ctrl+D, etc.)
+  if (e.ctrlKey || e.metaKey) return;
+
+  // Bloquear propagação pra teclas normais em campos editáveis
+  e.stopPropagation();
 }
 
 export function NodeDeleteButton({ nodeId }: { nodeId: string }) {
