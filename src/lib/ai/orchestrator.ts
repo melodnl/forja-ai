@@ -41,7 +41,12 @@ export async function generateWithProvider(
     const result = await primary.generate(params);
     return { jobId: result.jobId, provider: primary.name };
   } catch (err) {
-    // Fallback: se Kie falhou, tenta Venice. Se Venice falhou, tenta Kie.
+    // Google: NÃO fazer fallback — mostrar erro real pro usuário
+    if (providerName === "google") {
+      throw err;
+    }
+
+    // Outros: fallback pra outro provider
     const fallbackName = providerName === "kie" ? "venice" : "kie";
     const fallback = getProviderByName(fallbackName);
 
@@ -51,7 +56,7 @@ export async function generateWithProvider(
       const result = await fallback.generate(params);
       return { jobId: result.jobId, provider: fallback.name };
     } catch {
-      throw err; // Propaga erro original se fallback também falhar
+      throw err;
     }
   }
 }
