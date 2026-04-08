@@ -81,17 +81,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   setEdges: (edges) => set({ edges }),
 
   onNodesChange: (changes) => {
-    // Filtrar removes do React Flow — usamos nosso próprio deleteNode
-    const filtered = changes.filter((c) => c.type !== "remove");
-    if (filtered.length === 0) return;
-    set({ nodes: applyNodeChanges(filtered, get().nodes), hasUnsavedChanges: true });
+    set({ nodes: applyNodeChanges(changes, get().nodes), hasUnsavedChanges: true });
     debouncedSave(get);
   },
 
   onEdgesChange: (changes) => {
-    const filtered = changes.filter((c) => c.type !== "remove");
-    if (filtered.length === 0) return;
-    set({ edges: applyEdgeChanges(filtered, get().edges), hasUnsavedChanges: true });
+    set({ edges: applyEdgeChanges(changes, get().edges), hasUnsavedChanges: true });
     debouncedSave(get);
   },
 

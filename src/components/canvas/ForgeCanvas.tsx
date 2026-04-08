@@ -110,8 +110,8 @@ export function ForgeCanvas({ boardId }: { boardId: string }) {
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [deleteNode, saveBoard]);
 
   const handleNodeClick = useCallback(
@@ -165,7 +165,7 @@ export function ForgeCanvas({ boardId }: { boardId: string }) {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={{ type: "animated", animated: true }}
-        deleteKeyCode={null}
+        deleteKeyCode={[]}
         selectionKeyCode={null}
         multiSelectionKeyCode={null}
         zoomActivationKeyCode={null}

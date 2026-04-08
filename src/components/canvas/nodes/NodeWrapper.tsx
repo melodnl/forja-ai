@@ -5,16 +5,7 @@ import { useCanvasStore } from "@/store/canvas.store";
 
 /** Impede React Flow de capturar teclas quando digitando em inputs dentro de nós */
 export function stopNodeKeyCapture(e: React.KeyboardEvent) {
-  const target = e.target as HTMLElement;
-  const tag = target.tagName;
-  const isEditable = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
-
-  if (!isEditable) return;
-
-  // Deixar Ctrl/Meta combos passarem (Ctrl+Z, Ctrl+S, Ctrl+D, etc.)
-  if (e.ctrlKey || e.metaKey) return;
-
-  // Bloquear propagação pra teclas normais em campos editáveis
+  // Sempre bloquear propagação — nosso handler global no useEffect cuida de Ctrl+Z, Ctrl+S, etc.
   e.stopPropagation();
 }
 
