@@ -80,6 +80,24 @@ export function ForgeCanvas({ boardId }: { boardId: string }) {
         e.preventDefault();
         saveBoard();
       }
+      // Ctrl+D: duplicar nó
+      if ((e.metaKey || e.ctrlKey) && e.key === "d") {
+        e.preventDefault();
+        const state = useCanvasStore.getState();
+        const { selectedNodeId, nodes, addNode } = state;
+        if (selectedNodeId) {
+          const original = nodes.find((n) => n.id === selectedNodeId);
+          if (original) {
+            addNode({
+              ...original,
+              id: `${original.type}-${Date.now()}`,
+              position: { x: original.position.x + 40, y: original.position.y + 40 },
+              selected: false,
+              data: { ...original.data },
+            });
+          }
+        }
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown);

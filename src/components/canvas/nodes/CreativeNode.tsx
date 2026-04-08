@@ -174,6 +174,18 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
     updateNodeData(id, { prompt }); setShowTemplates(false); toast.success("Template aplicado!");
   }, [id, updateNodeData]);
 
+  const savePrompt = useCallback(async () => {
+    const text = nodeData.prompt || "";
+    if (text.trim().length < 5) { toast.error("Prompt muito curto"); return; }
+    const supabase = (await import("@/lib/supabase/client")).createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("saved_prompts").insert({
+      user_id: user.id, prompt: text, model: modelValue, category: isVideo ? "video" : "image",
+    });
+    toast.success("Prompt salvo!");
+  }, [nodeData.prompt, modelValue, isVideo]);
+
   return (
     <div className={`group/node w-80 rounded-lg border bg-[var(--canvas-node-bg)] transition-all duration-200 ${selected ? "border-[var(--forja-ember)] shadow-[0_0_24px_rgba(255,107,26,0.15)]" : "border-[var(--forja-border)]"}`}>
       {/* Header */}
@@ -286,7 +298,7 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
                         className="flex w-full px-3 py-2 text-left text-[11px] text-[var(--forja-text)] hover:bg-[var(--forja-bg-hover)] transition-colors">{t.name}</button>
                     ))}
                     <div className="border-t border-[var(--forja-border)] mt-1 pt-1 px-3 py-1.5">
-                      <span className="text-[10px] text-[var(--forja-text-dim)] cursor-pointer hover:text-[var(--forja-text)]">+ Salvar prompt atual como template</span>
+                      <button onClick={savePrompt} className="text-[10px] text-[var(--forja-text-dim)] cursor-pointer hover:text-[var(--forja-ember)] transition-colors">+ Salvar prompt atual como template</button>
                     </div>
                   </div>
                 )}

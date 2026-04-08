@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DashboardMetrics } from "@/components/shared/DashboardMetrics";
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
@@ -86,6 +87,7 @@ export default function DashboardPage() {
 
   return (
     <div>
+      <DashboardMetrics />
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <button

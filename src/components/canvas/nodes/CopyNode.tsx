@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { FileText, Loader2, Copy, Check } from "lucide-react";
+import { FileText, Loader2, Copy, Check, ThumbsUp, Trophy } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas.store";
 import { toast } from "sonner";
 import type { CopyNodeData } from "@/types/nodes";
@@ -36,6 +36,7 @@ function CopyNodeComponent({ id, data, selected }: NodeProps) {
   const updateNodeData = useCanvasStore((s) => s.updateNodeData);
   const [generating, setGenerating] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [winnerIdx, setWinnerIdx] = useState<number | null>(null);
 
   const handleChange = useCallback(
     (field: string, value: string | number) => {
@@ -187,19 +188,25 @@ function CopyNodeComponent({ id, data, selected }: NodeProps) {
             {nodeData.outputs.map((text, i) => (
               <div
                 key={i}
-                className="group flex items-start gap-2 rounded-md bg-[var(--forja-bg)] p-2"
+                className={`group flex items-start gap-2 rounded-md p-2 ${winnerIdx === i ? "bg-[var(--forja-ember)]/10 border border-[var(--forja-ember)]/30" : "bg-[var(--forja-bg)]"}`}
               >
+                {winnerIdx === i && <Trophy className="h-3 w-3 shrink-0 mt-0.5 text-[var(--forja-ember)]" />}
                 <p className="flex-1 text-xs text-[var(--forja-text)] leading-relaxed">{text}</p>
-                <button
-                  onClick={() => copyToClipboard(text, i)}
-                  className="shrink-0 mt-0.5 text-[var(--forja-text-dim)] hover:text-[var(--forja-ember)]"
-                >
-                  {copiedIdx === i ? (
-                    <Check className="h-3 w-3 text-[var(--forja-success)]" />
-                  ) : (
-                    <Copy className="h-3 w-3" />
-                  )}
-                </button>
+                <div className="flex flex-col gap-1 shrink-0 mt-0.5">
+                  <button
+                    onClick={() => setWinnerIdx(winnerIdx === i ? null : i)}
+                    title="Marcar como vencedor"
+                    className={`${winnerIdx === i ? "text-[var(--forja-ember)]" : "text-[var(--forja-text-dim)] hover:text-[var(--forja-ember)]"}`}
+                  >
+                    <ThumbsUp className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => copyToClipboard(text, i)}
+                    className="text-[var(--forja-text-dim)] hover:text-[var(--forja-ember)]"
+                  >
+                    {copiedIdx === i ? <Check className="h-3 w-3 text-[var(--forja-success)]" /> : <Copy className="h-3 w-3" />}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
