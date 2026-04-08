@@ -62,7 +62,7 @@ export async function GET(
         );
 
         if (jobStatus.status === "completed" && jobStatus.outputUrls) {
-          // Atualizar no banco
+          // Atualizar geração no banco
           await supabase
             .from("generations")
             .update({
@@ -71,6 +71,16 @@ export async function GET(
               completed_at: new Date().toISOString(),
             })
             .eq("id", id);
+
+          // Salvar assets na biblioteca
+          for (const url of jobStatus.outputUrls) {
+            await supabase.from("assets").insert({
+              user_id: user.id,
+              generation_id: id,
+              type: generation.type === "video" ? "video" : "image",
+              url,
+            });
+          }
 
           return NextResponse.json({
             status: "completed",
