@@ -81,6 +81,15 @@ export function ForgeCanvas({ boardId }: { boardId: string }) {
         e.preventDefault();
         saveBoard();
       }
+      // Ctrl+Z: undo / Ctrl+Shift+Z: redo
+      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          useCanvasStore.getState().redo();
+        } else {
+          useCanvasStore.getState().undo();
+        }
+      }
       // Ctrl+D: duplicar nó
       if ((e.metaKey || e.ctrlKey) && e.key === "d") {
         e.preventDefault();

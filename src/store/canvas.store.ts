@@ -11,6 +11,11 @@ import {
 } from "@xyflow/react";
 import { createClient } from "@/lib/supabase/client";
 
+interface Snapshot {
+  nodes: Node[];
+  edges: Edge[];
+}
+
 interface CanvasState {
   boardId: string | null;
   boardName: string;
@@ -21,6 +26,8 @@ interface CanvasState {
   isSaving: boolean;
   lastSavedAt: Date | null;
   hasUnsavedChanges: boolean;
+  undoStack: Snapshot[];
+  redoStack: Snapshot[];
 
   // Actions
   setBoardId: (id: string) => void;
@@ -37,6 +44,9 @@ interface CanvasState {
   saveBoard: () => Promise<void>;
   loadBoard: (id: string) => Promise<void>;
   markUnsaved: () => void;
+  undo: () => void;
+  redo: () => void;
+  pushSnapshot: () => void;
 }
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -52,6 +62,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   boardId: null,
   boardName: "Novo Board",
   nodes: [],
+  undoStack: [],
+  redoStack: [],
   edges: [],
   selectedNodeId: null,
   isLoading: true,
@@ -90,6 +102,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   addNode: (node) => {
+    get().pushSnapshot();
     set({ nodes: [...get().nodes, node], hasUnsavedChanges: true });
     debouncedSave(get);
   },
@@ -105,6 +118,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   deleteNode: (id) => {
+    get().pushSnapshot();
     set({
       nodes: get().nodes.filter((n) => n.id !== id),
       edges: get().edges.filter((e) => e.source !== id && e.target !== id),
@@ -116,6 +130,42 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   setSelectedNodeId: (id) => set({ selectedNodeId: id }),
 
   markUnsaved: () => set({ hasUnsavedChanges: true }),
+
+  pushSnapshot: () => {
+    const { nodes, edges, undoStack } = get();
+    const snapshot = { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) };
+    set({ undoStack: [...undoStack.slice(-30), snapshot], redoStack: [] });
+  },
+
+  undo: () => {
+    const { undoStack, nodes, edges } = get();
+    if (undoStack.length === 0) return;
+    const prev = undoStack[undoStack.length - 1];
+    const currentSnapshot = { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) };
+    set({
+      nodes: prev.nodes,
+      edges: prev.edges,
+      undoStack: undoStack.slice(0, -1),
+      redoStack: [...get().redoStack, currentSnapshot],
+      hasUnsavedChanges: true,
+    });
+    debouncedSave(get);
+  },
+
+  redo: () => {
+    const { redoStack, nodes, edges } = get();
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    const currentSnapshot = { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) };
+    set({
+      nodes: next.nodes,
+      edges: next.edges,
+      redoStack: redoStack.slice(0, -1),
+      undoStack: [...get().undoStack, currentSnapshot],
+      hasUnsavedChanges: true,
+    });
+    debouncedSave(get);
+  },
 
   saveBoard: async () => {
     const { boardId, nodes, edges, boardName, isSaving } = get();
