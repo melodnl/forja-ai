@@ -22,6 +22,10 @@ const VIDEO_MODELS = [
   { value: "seedance-2", label: "Seedance 2.0 (UGC/Lip Sync)" },
   { value: "seedance-2-fast", label: "Seedance 2.0 Fast" },
   { value: "seedance-1.5-pro", label: "Seedance 1.5 Pro" },
+  { value: "veo3-fast", label: "Veo 3 Fast" },
+  { value: "veo3-quality", label: "Veo 3 Quality" },
+  { value: "veo3-lite", label: "Veo 3 Lite" },
+  { value: "runway", label: "Runway Gen-4" },
   { value: "grok-video", label: "Grok Video" },
 ];
 

@@ -1,23 +1,38 @@
 import type { AIProvider, GenerateParams, JobStatus } from "@/types/ai";
 
-const KIE_BASE_URL = "https://api.kie.ai/api/v1/jobs";
+const KIE_BASE = "https://api.kie.ai/api/v1";
 
-// Mapeamento: ID interno → model ID da Kie.ai (testados e confirmados)
-const MODEL_MAP: Record<string, string> = {
-  // Imagem (confirmados ✅)
+// Modelos que usam /jobs/createTask
+const JOBS_MODEL_MAP: Record<string, string> = {
+  // Imagem ✅
   "grok-imagine": "grok-imagine/text-to-image",
   "imagen4-ultra": "google/imagen4-ultra",
   "imagen4": "google/imagen4",
   "ideogram-v3": "ideogram/v3-text-to-image",
   "qwen": "qwen/text-to-image",
   "grok-img2img": "grok-imagine/image-to-image",
-  // Vídeo (confirmados ✅)
+  // Vídeo via /jobs ✅
   "seedance-2": "bytedance/seedance-2",
   "seedance-2-fast": "bytedance/seedance-2-fast",
   "seedance-1.5-pro": "bytedance/seedance-1.5-pro",
   "grok-video": "grok-imagine/text-to-video",
+  "sora-2-characters": "sora-2-characters",
   // Utilitários
   "upscale": "recraft/crisp-upscale",
+};
+
+// Modelos com endpoint próprio (não usam /jobs/createTask)
+const SPECIAL_ENDPOINTS: Record<string, string> = {
+  "veo3-quality": "veo",
+  "veo3-fast": "veo",
+  "veo3-lite": "veo",
+  "runway": "runway",
+};
+
+const VEO_MODEL_MAP: Record<string, string> = {
+  "veo3-quality": "veo3",
+  "veo3-fast": "veo3_fast",
+  "veo3-lite": "veo3_lite",
 };
 
 export const kieProvider: AIProvider = {
@@ -27,84 +42,56 @@ export const kieProvider: AIProvider = {
     const apiKey = process.env.KIE_API_KEY;
     if (!apiKey) throw new Error("KIE_API_KEY não configurada");
 
-    const model = MODEL_MAP[params.model] || params.model;
+    const specialEndpoint = SPECIAL_ENDPOINTS[params.model];
 
-    const input: Record<string, unknown> = {
-      prompt: params.prompt,
-    };
-
-    // Adicionar imagens se tiver
-    if (params.imageUrls && params.imageUrls.length > 0) {
-      input.image_urls = params.imageUrls;
+    if (specialEndpoint === "veo") {
+      return generateVeo(apiKey, params);
     }
 
-    // Aspect ratio
-    if (params.aspectRatio) {
-      input.aspect_ratio = params.aspectRatio;
+    if (specialEndpoint === "runway") {
+      return generateRunway(apiKey, params);
     }
 
-    // Formato de output
-    if (params.format) {
-      input.output_format = params.format;
-    }
-
-    const response = await fetch(`${KIE_BASE_URL}/createTask`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        input,
-        callBackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/kie`,
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`Kie.ai error: ${response.status} — ${err}`);
-    }
-
-    const data = await response.json();
-
-    if (data.code !== 200) {
-      throw new Error(`Kie.ai error: ${data.msg || "Erro desconhecido"}`);
-    }
-
-    const taskId = data.data?.taskId;
-    if (!taskId) throw new Error("Kie.ai não retornou taskId");
-
-    return { jobId: taskId };
+    // Default: /jobs/createTask
+    return generateViaJobs(apiKey, params);
   },
 
   async getStatus(jobId: string): Promise<JobStatus> {
     const apiKey = process.env.KIE_API_KEY;
     if (!apiKey) throw new Error("KIE_API_KEY não configurada");
 
+    // Tentar /jobs/recordInfo primeiro
     const response = await fetch(
-      `${KIE_BASE_URL}/recordInfo?taskId=${jobId}`,
-      {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      }
+      `${KIE_BASE}/jobs/recordInfo?taskId=${jobId}`,
+      { headers: { Authorization: `Bearer ${apiKey}` } }
     );
 
     if (!response.ok) {
+      // Tentar endpoint de runway
+      const runwayRes = await fetch(
+        `${KIE_BASE}/runway/${jobId}`,
+        { headers: { Authorization: `Bearer ${apiKey}` } }
+      );
+      if (runwayRes.ok) {
+        const rd = await runwayRes.json();
+        if (rd.data?.status === "completed" || rd.data?.videoUrl) {
+          return { status: "completed", outputUrls: [rd.data.videoUrl] };
+        }
+        if (rd.data?.status === "failed") {
+          return { status: "failed", error: rd.data.error || "Falhou" };
+        }
+        return { status: "processing" };
+      }
       throw new Error(`Kie.ai status error: ${response.status}`);
     }
 
     const data = await response.json();
     const record = data.data;
 
-    if (!record) {
-      return { status: "processing" };
-    }
+    if (!record) return { status: "processing" };
 
-    // Status: waiting, queuing, generating, success, fail
     if (record.state === "success") {
       let urls: string[] = [];
-
-      // resultJson é uma string JSON com resultUrls
       if (record.resultJson) {
         try {
           const result = typeof record.resultJson === "string"
@@ -115,18 +102,97 @@ export const kieProvider: AIProvider = {
           urls = [];
         }
       }
-
       return { status: "completed", outputUrls: urls };
     }
 
     if (record.state === "fail") {
-      return {
-        status: "failed",
-        error: record.failMsg || "Geração falhou na Kie.ai",
-      };
+      return { status: "failed", error: record.failMsg || "Geração falhou" };
     }
 
-    // waiting, queuing, generating → still processing
     return { status: "processing" };
   },
 };
+
+// ---- /jobs/createTask (Seedance, Grok, Imagen, Ideogram, etc.) ----
+async function generateViaJobs(apiKey: string, params: GenerateParams): Promise<{ jobId: string }> {
+  const model = JOBS_MODEL_MAP[params.model] || params.model;
+
+  const input: Record<string, unknown> = { prompt: params.prompt };
+  if (params.imageUrls?.length) input.image_urls = params.imageUrls;
+  if (params.aspectRatio) input.aspect_ratio = params.aspectRatio;
+  if (params.format) input.output_format = params.format;
+
+  // Seedance precisa de web_search
+  if (params.model.startsWith("seedance")) {
+    input.web_search = false;
+  }
+
+  const res = await fetch(`${KIE_BASE}/jobs/createTask`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      input,
+      callBackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/kie`,
+    }),
+  });
+
+  const data = await res.json();
+  if (data.code !== 200) throw new Error(`Kie.ai: ${data.msg}`);
+  return { jobId: data.data?.taskId };
+}
+
+// ---- /veo/generate (Veo 3 Quality/Fast/Lite) ----
+async function generateVeo(apiKey: string, params: GenerateParams): Promise<{ jobId: string }> {
+  const model = VEO_MODEL_MAP[params.model] || "veo3_fast";
+
+  const body: Record<string, unknown> = {
+    prompt: params.prompt,
+    model,
+    aspect_ratio: params.aspectRatio || "16:9",
+    callBackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/kie`,
+    enableTranslation: true,
+    watermark: "",
+  };
+
+  if (params.imageUrls?.length) {
+    body.imageUrls = params.imageUrls;
+    body.generationType = "REFERENCE_2_VIDEO";
+  }
+
+  const res = await fetch(`${KIE_BASE}/veo/generate`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+  if (data.code !== 200) throw new Error(`Kie.ai Veo: ${data.msg}`);
+  return { jobId: data.data?.taskId };
+}
+
+// ---- /runway/generate (Runway Gen-4) ----
+async function generateRunway(apiKey: string, params: GenerateParams): Promise<{ jobId: string }> {
+  const body: Record<string, unknown> = {
+    prompt: params.prompt,
+    duration: 5,
+    quality: "720p",
+    aspectRatio: params.aspectRatio || "16:9",
+    waterMark: "",
+    callBackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/kie`,
+  };
+
+  if (params.imageUrls?.length) {
+    body.imageUrl = params.imageUrls[0];
+  }
+
+  const res = await fetch(`${KIE_BASE}/runway/generate`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+  if (data.code !== 200) throw new Error(`Kie.ai Runway: ${data.msg}`);
+  return { jobId: data.data?.taskId };
+}

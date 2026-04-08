@@ -11,13 +11,18 @@ export const CREDIT_COSTS = {
   "seedance-2": 20,
   "seedance-2-fast": 15,
   "seedance-1.5-pro": 25,
+  "veo3-quality": 50,
+  "veo3-fast": 30,
+  "veo3-lite": 15,
+  "runway": 25,
   "grok-video": 15,
+  "sora-2-characters": 30,
 
-  // Voz (por 1k caracteres)
+  // Voz
   elevenlabs: 5,
   "fish-audio": 2,
 
-  // Copy (por 1k tokens output)
+  // Copy
   "claude-sonnet-4-5": 3,
   "gpt-4-1": 3,
   "gemini-2-0": 2,
