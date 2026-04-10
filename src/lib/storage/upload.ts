@@ -22,11 +22,21 @@ export async function downloadAndStore(
 
   const buffer = await response.arrayBuffer();
   const contentType = response.headers.get("content-type") || "image/png";
-  const ext = contentType.includes("webp")
-    ? "webp"
-    : contentType.includes("jpeg") || contentType.includes("jpg")
-    ? "jpg"
-    : "png";
+
+  // Detectar extensão do content-type ou da URL
+  let ext = "png";
+  if (contentType.includes("mp4") || contentType.includes("video")) ext = "mp4";
+  else if (contentType.includes("webm")) ext = "webm";
+  else if (contentType.includes("mov") || contentType.includes("quicktime")) ext = "mov";
+  else if (contentType.includes("webp")) ext = "webp";
+  else if (contentType.includes("jpeg") || contentType.includes("jpg")) ext = "jpg";
+  else {
+    // Fallback: checar extensão na URL
+    const urlExt = externalUrl.split("?")[0].split(".").pop()?.toLowerCase();
+    if (urlExt && ["mp4", "webm", "mov", "jpg", "jpeg", "png", "webp", "gif"].includes(urlExt)) {
+      ext = urlExt === "jpeg" ? "jpg" : urlExt;
+    }
+  }
 
   const path = `${userId}/${generationId}/${index}.${ext}`;
   const supabase = getServiceClient();

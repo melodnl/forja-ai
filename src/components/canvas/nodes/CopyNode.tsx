@@ -1,12 +1,12 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { FileText, Loader2, Copy, Check, ThumbsUp, Trophy } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas.store";
 import { toast } from "sonner";
 import type { CopyNodeData } from "@/types/nodes";
-import { NodeDeleteButton, stopNodeKeyCapture } from "./NodeWrapper";
+import { NodeDeleteButton, NodeDuplicateButton } from "./NodeWrapper";
 
 const MODELS = [
   { value: "claude-sonnet-4-5", label: "Claude Sonnet 4.5" },
@@ -37,6 +37,14 @@ function CopyNodeComponent({ id, data, selected }: NodeProps) {
   const [generating, setGenerating] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [winnerIdx, setWinnerIdx] = useState<number | null>(null);
+
+  // Estado local do briefing — evita reset de cursor pelo React Flow
+  const [localBriefing, setLocalBriefing] = useState(nodeData.briefing || "");
+  const isLocalEdit = useRef(false);
+  useEffect(() => {
+    if (!isLocalEdit.current) setLocalBriefing(nodeData.briefing || "");
+    isLocalEdit.current = false;
+  }, [nodeData.briefing]);
 
   const handleChange = useCallback(
     (field: string, value: string | number) => {
@@ -86,7 +94,6 @@ function CopyNodeComponent({ id, data, selected }: NodeProps) {
 
   return (
     <div
-      onKeyDown={stopNodeKeyCapture}
       className={`group/node w-80 rounded-lg border bg-[var(--canvas-node-bg)] transition-all duration-200 ${
         selected
           ? "border-[var(--forja-ember)] shadow-[0_0_24px_rgba(255,107,26,0.15)]"
@@ -99,6 +106,7 @@ function CopyNodeComponent({ id, data, selected }: NodeProps) {
         <span className="text-xs font-medium text-[var(--forja-text)]">
           {nodeData.label || "Copy"}
         </span>
+        <NodeDuplicateButton nodeId={id} />
         <NodeDeleteButton nodeId={id} />
       </div>
 
@@ -164,8 +172,8 @@ function CopyNodeComponent({ id, data, selected }: NodeProps) {
         <div className="flex flex-col gap-1">
           <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">Briefing</label>
           <textarea
-            value={nodeData.briefing || ""}
-            onChange={(e) => handleChange("briefing", e.target.value)}
+            value={localBriefing}
+            onChange={(e) => { isLocalEdit.current = true; setLocalBriefing(e.target.value); handleChange("briefing", e.target.value); }}
             onKeyDown={(e) => e.stopPropagation()}
             placeholder="Descreva o produto, público-alvo, oferta..."
             rows={3}

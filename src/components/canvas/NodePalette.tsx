@@ -1,13 +1,15 @@
 "use client";
 
 import { useCallback } from "react";
-import { ImageIcon, Type, Flame, Video, Mic, FileText, ZoomIn, Eraser, UserCircle, Bot, Share2, Link, FileBox } from "lucide-react";
+import { ImageIcon, Type, Flame, Video, Mic, FileText, ZoomIn, Eraser, UserCircle, Bot, Share2, Link, FileBox, ImagePlus, User } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas.store";
 import { NODE_DEFAULTS, type ForjaNodeType } from "@/types/nodes";
 
 const PALETTE_ITEMS: { type: ForjaNodeType; icon: React.ElementType; label: string; color: string }[] = [
   { type: "assistant", icon: Bot, label: "Assistente IA", color: "var(--forja-info)" },
   { type: "creative", icon: Flame, label: "Nó Criativo", color: "var(--forja-ember)" },
+  { type: "reference", icon: ImagePlus, label: "Referência", color: "var(--forja-info)" },
+  { type: "avatar" as ForjaNodeType, icon: UserCircle, label: "Avatar", color: "var(--forja-spark)" },
   { type: "image", icon: ImageIcon, label: "Imagem", color: "var(--forja-amber)" },
   { type: "video", icon: Video, label: "Vídeo", color: "var(--forja-glow)" },
   { type: "copy", icon: FileText, label: "Texto", color: "var(--forja-text-muted)" },
@@ -19,11 +21,30 @@ const PALETTE_ITEMS: { type: ForjaNodeType; icon: React.ElementType; label: stri
 
 export function NodePalette() {
   const addNode = useCanvasStore((s) => s.addNode);
+  const nodes = useCanvasStore((s) => s.nodes);
 
   const handleAdd = useCallback(
     (type: ForjaNodeType) => {
       const id = `${type}-${Date.now()}`;
-      const defaults = NODE_DEFAULTS[type];
+      const defaults = { ...NODE_DEFAULTS[type] };
+
+      // Auto-incrementar label para nós de referência e avatar
+      if (type === "reference") {
+        const refNodes = nodes.filter((n) => n.type === "reference");
+        const maxNum = refNodes.reduce((max, n) => {
+          const match = ((n.data as Record<string, unknown>).label as string || "").match(/^img(\d+)$/);
+          return match ? Math.max(max, parseInt(match[1])) : max;
+        }, 0);
+        defaults.label = `img${maxNum + 1}`;
+      }
+      if (type === "avatar") {
+        const avatarNodes = nodes.filter((n) => n.type === "avatar");
+        const maxNum = avatarNodes.reduce((max, n) => {
+          const match = ((n.data as Record<string, unknown>).label as string || "").match(/^avatar(\d+)$/);
+          return match ? Math.max(max, parseInt(match[1])) : max;
+        }, 0);
+        defaults.label = `avatar${maxNum + 1}`;
+      }
 
       addNode({
         id,
@@ -32,10 +53,10 @@ export function NodePalette() {
           x: 200 + Math.random() * 300,
           y: 200 + Math.random() * 200,
         },
-        data: { ...defaults },
+        data: defaults,
       });
     },
-    [addNode]
+    [addNode, nodes]
   );
 
   return (

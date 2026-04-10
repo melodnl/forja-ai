@@ -4,7 +4,8 @@ import { memo, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Video, Download, Play, X } from "lucide-react";
 import type { VideoNodeData } from "@/types/nodes";
-import { NodeDeleteButton } from "./NodeWrapper";
+import { NodeDeleteButton, NodeDuplicateButton } from "./NodeWrapper";
+import { forceDownload } from "@/lib/download";
 
 function VideoNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as VideoNodeData;
@@ -30,6 +31,7 @@ function VideoNodeComponent({ id, data, selected }: NodeProps) {
           {nodeData.duration && (
             <span className="text-[10px] text-[var(--forja-text-dim)]">{nodeData.duration}s</span>
           )}
+          <NodeDuplicateButton nodeId={id} />
           <NodeDeleteButton nodeId={id} />
         </div>
 
@@ -42,6 +44,7 @@ function VideoNodeComponent({ id, data, selected }: NodeProps) {
                 className="w-full rounded-md bg-black"
                 muted
                 playsInline
+                preload="metadata"
               />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/60">
@@ -49,9 +52,9 @@ function VideoNodeComponent({ id, data, selected }: NodeProps) {
                 </div>
               </div>
               <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <a href={nodeData.url} download className="rounded bg-black/70 p-1 hover:bg-black/90" onClick={(e) => e.stopPropagation()}>
+                <button className="rounded bg-black/70 p-1 hover:bg-black/90" onClick={(e) => { e.stopPropagation(); forceDownload(nodeData.url!); }}>
                   <Download className="h-3 w-3 text-white" />
-                </a>
+                </button>
               </div>
             </div>
           ) : (
@@ -71,15 +74,17 @@ function VideoNodeComponent({ id, data, selected }: NodeProps) {
 
       {/* Fullscreen modal */}
       {expanded && nodeData.url && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm" onClick={() => setExpanded(false)}>
-          <button onClick={() => setExpanded(false)} className="absolute top-4 right-4 rounded-full bg-white/10 p-2 hover:bg-white/20 z-10">
-            <X className="h-5 w-5 text-white" />
-          </button>
-          <video src={nodeData.url} controls autoPlay className="max-w-[90vw] max-h-[90vh] rounded-lg" onClick={(e) => e.stopPropagation()} />
-          <div className="absolute bottom-6 flex gap-3">
-            <a href={nodeData.url} download className="flex items-center gap-2 rounded-lg bg-[var(--forja-ember)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--forja-ember-hover)]">
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm" onClick={() => setExpanded(false)}>
+          <div className="relative flex flex-col items-center gap-4 max-w-[90vw] max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
+            <video src={nodeData.url} controls autoPlay className="max-w-full max-h-[80vh] rounded-lg" />
+          </div>
+          <div className="flex items-center gap-3 mt-4">
+            <button onClick={(e) => { e.stopPropagation(); forceDownload(nodeData.url!); }} className="flex items-center gap-2 rounded-lg bg-[var(--forja-ember)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--forja-ember-hover)] transition-colors">
               <Download className="h-4 w-4" /> Download
-            </a>
+            </button>
+            <button onClick={() => setExpanded(false)} className="flex items-center gap-2 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-medium text-white hover:bg-white/20 transition-colors">
+              <X className="h-4 w-4" /> Fechar
+            </button>
           </div>
         </div>
       )}

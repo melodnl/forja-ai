@@ -10,12 +10,13 @@ export function useGeneration() {
 
   const createOutputNodes = useCallback(
     (sourceNodeId: string, urls: string[], isVideo: boolean) => {
-      const { nodes, addNode, edges } = useCanvasStore.getState();
+      const { nodes, addNode } = useCanvasStore.getState();
       const sourceNode = nodes.find((n) => n.id === sourceNodeId);
       if (!sourceNode) return;
 
       const baseX = sourceNode.position.x + 400;
       const baseY = sourceNode.position.y;
+      const newEdges: { id: string; source: string; target: string; type: string; animated: boolean }[] = [];
 
       urls.forEach((url, i) => {
         const outputId = `${isVideo ? "video" : "image"}-output-${Date.now()}-${i}`;
@@ -30,20 +31,24 @@ export function useGeneration() {
             : { label: `Imagem ${i + 1}`, url, width: 0, height: 0, filename: "" },
         });
 
-        // Conectar edge do creative → output
-        const store = useCanvasStore.getState();
-        const newEdge = {
+        newEdges.push({
           id: `edge-${sourceNodeId}-${outputId}`,
           source: sourceNodeId,
           target: outputId,
           type: "animated",
           animated: true,
-        };
-        useCanvasStore.setState({
-          edges: [...store.edges, newEdge],
-          hasUnsavedChanges: true,
         });
       });
+
+      // Adicionar todas as edges de uma vez e salvar imediatamente
+      const store = useCanvasStore.getState();
+      useCanvasStore.setState({
+        edges: [...store.edges, ...newEdges],
+        hasUnsavedChanges: true,
+      });
+
+      // Salvar imediatamente — não depender do debounce de 2s
+      useCanvasStore.getState().saveBoard();
     },
     []
   );
@@ -68,9 +73,13 @@ export function useGeneration() {
               outputUrls: urls,
             });
 
-            // Criar nós de output conectados
+            // Criar nós de output conectados (se realtime não criou antes)
             if (urls.length > 0) {
-              createOutputNodes(nodeId, urls, isVideo);
+              const { edges } = useCanvasStore.getState();
+              const alreadyHasOutput = edges.some((e) => e.source === nodeId);
+              if (!alreadyHasOutput) {
+                createOutputNodes(nodeId, urls, isVideo);
+              }
             }
 
             toast.success("Geração concluída!");

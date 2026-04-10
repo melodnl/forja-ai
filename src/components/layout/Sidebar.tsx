@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   LayoutDashboard,
@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { ForjaLogo } from "@/components/shared/ForjaLogo";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 const navItems = [
   { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -25,8 +27,25 @@ const navItems = [
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
   const t = useTranslations("nav");
   const pathWithoutLocale = pathname.replace(/^\/(pt-BR|es|en)/, "");
+
+  async function handleNewBoard() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("Faça login primeiro"); return; }
+
+    const { data, error } = await supabase
+      .from("boards")
+      .insert({ user_id: user.id, name: "Novo Board", nodes: [], edges: [] })
+      .select()
+      .single();
+
+    if (error) { toast.error("Erro: " + error.message); return; }
+    onNavigate?.();
+    router.push(`/board/${data.id}`);
+  }
 
   return (
     <>
@@ -37,14 +56,13 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* New Board */}
       <div className="px-3 pb-2">
-        <Link
-          href="/dashboard"
-          onClick={onNavigate}
-          className="flex items-center gap-2 rounded-lg bg-[var(--forja-ember)] px-3 py-2 text-sm font-medium text-[var(--forja-bg)] transition-all duration-200 hover:bg-[var(--forja-ember-hover)] hover:shadow-[0_0_24px_rgba(255,107,26,0.15)]"
+        <button
+          onClick={handleNewBoard}
+          className="flex w-full items-center gap-2 rounded-lg bg-[var(--forja-ember)] px-3 py-2 text-sm font-medium text-[var(--forja-bg)] transition-all duration-200 hover:bg-[var(--forja-ember-hover)] hover:shadow-[0_0_24px_rgba(255,107,26,0.15)]"
         >
           <Plus className="h-4 w-4" />
           {t("newBoard")}
-        </Link>
+        </button>
       </div>
 
       {/* Nav */}

@@ -6,7 +6,7 @@ import { Eraser, Loader2, CheckCircle } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas.store";
 import { useNodeInputs } from "@/hooks/useNodeConnections";
 import { toast } from "sonner";
-import { NodeDeleteButton } from "./NodeWrapper";
+import { NodeDeleteButton, NodeDuplicateButton } from "./NodeWrapper";
 
 function RemoveBgNodeComponent({ id, data, selected }: NodeProps) {
   const updateNodeData = useCanvasStore((s) => s.updateNodeData);
@@ -48,6 +48,7 @@ function RemoveBgNodeComponent({ id, data, selected }: NodeProps) {
       <div className="flex items-center gap-2 border-b border-[var(--forja-border)] px-3 py-2">
         <Eraser className="h-4 w-4 text-[var(--forja-warning)]" />
         <span className="text-xs font-medium text-[var(--forja-text)]">Remover Fundo</span>
+        <NodeDuplicateButton nodeId={id} />
         <NodeDeleteButton nodeId={id} />
       </div>
       <div className="flex flex-col gap-3 p-3">

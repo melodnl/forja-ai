@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import {
   ReactFlow,
   Background,
@@ -23,6 +23,8 @@ import { UpscaleNode } from "./nodes/UpscaleNode";
 import { RemoveBgNode } from "./nodes/RemoveBgNode";
 import { UGCAvatarNode } from "./nodes/UGCAvatarNode";
 import { AssistantNode } from "./nodes/AssistantNode";
+import { ReferenceNode } from "./nodes/ReferenceNode";
+import { AvatarNode } from "./nodes/AvatarNode";
 import { AnimatedEdge } from "./edges/AnimatedEdge";
 import { NodePalette } from "./NodePalette";
 import { Onboarding } from "./Onboarding";
@@ -38,11 +40,26 @@ const nodeTypes: NodeTypes = {
   remove_bg: RemoveBgNode,
   ugc_avatar: UGCAvatarNode,
   assistant: AssistantNode,
+  reference: ReferenceNode,
+  avatar: AvatarNode,
 };
 
 const edgeTypes: EdgeTypes = {
   animated: AnimatedEdge,
 };
+
+/** Checa se o foco está em um elemento editável */
+function isEditableActive(): boolean {
+  const el = document.activeElement;
+  if (!el || el === document.body) return false;
+  const tag = el.tagName;
+  return (
+    tag === "INPUT" ||
+    tag === "TEXTAREA" ||
+    tag === "SELECT" ||
+    (el as HTMLElement).isContentEditable === true
+  );
+}
 
 export function ForgeCanvas({ boardId }: { boardId: string }) {
   const {
@@ -67,22 +84,25 @@ export function ForgeCanvas({ boardId }: { boardId: string }) {
   // Realtime: atualiza nós quando geração completa via webhook
   useRealtimeGenerations(boardId);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts — bubble phase normal (sem capture)
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      // Delete / Backspace — deletar nó SOMENTE se não estiver em campo editável
       if (e.key === "Delete" || e.key === "Backspace") {
-        const tag = (e.target as HTMLElement)?.tagName;
-        const isEditable = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target as HTMLElement)?.isContentEditable;
-        if (isEditable) return;
+        if (isEditableActive()) return; // deixa o input/textarea funcionar normalmente
         const { selectedNodeId } = useCanvasStore.getState();
-        if (selectedNodeId) deleteNode(selectedNodeId);
+        if (selectedNodeId) {
+          e.preventDefault();
+          deleteNode(selectedNodeId);
+        }
       }
+      // Ctrl+S — salvar
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
         saveBoard();
       }
-      // Ctrl+Z: undo / Ctrl+Shift+Z: redo
-      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
+      // Ctrl+Z / Ctrl+Shift+Z — undo/redo (apenas fora de campos editáveis)
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !isEditableActive()) {
         e.preventDefault();
         if (e.shiftKey) {
           useCanvasStore.getState().redo();
@@ -90,7 +110,7 @@ export function ForgeCanvas({ boardId }: { boardId: string }) {
           useCanvasStore.getState().undo();
         }
       }
-      // Ctrl+D: duplicar nó
+      // Ctrl+D — duplicar nó
       if ((e.metaKey || e.ctrlKey) && e.key === "d") {
         e.preventDefault();
         const state = useCanvasStore.getState();
@@ -110,8 +130,9 @@ export function ForgeCanvas({ boardId }: { boardId: string }) {
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown, true);
-    return () => window.removeEventListener("keydown", handleKeyDown, true);
+    // bubble phase — NÃO usar capture (true)
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [deleteNode, saveBoard]);
 
   const handleNodeClick = useCallback(
@@ -124,6 +145,19 @@ export function ForgeCanvas({ boardId }: { boardId: string }) {
   const handlePaneClick = useCallback(() => {
     setSelectedNodeId(null);
   }, [setSelectedNodeId]);
+
+  // Clicar na edge (fio) para removê-la
+  const handleEdgeClick = useCallback(
+    (_: React.MouseEvent, edge: { id: string }) => {
+      useCanvasStore.setState({
+        edges: useCanvasStore.getState().edges.filter((e) => e.id !== edge.id),
+        hasUnsavedChanges: true,
+      });
+      // Salvar após remover
+      setTimeout(() => useCanvasStore.getState().saveBoard(), 500);
+    },
+    []
+  );
 
   if (isLoading) {
     return (
@@ -161,11 +195,12 @@ export function ForgeCanvas({ boardId }: { boardId: string }) {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={handleNodeClick}
+        onEdgeClick={handleEdgeClick}
         onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={{ type: "animated", animated: true }}
-        deleteKeyCode={[]}
+        deleteKeyCode={null}
         selectionKeyCode={null}
         multiSelectionKeyCode={null}
         zoomActivationKeyCode={null}

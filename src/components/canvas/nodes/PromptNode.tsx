@@ -1,20 +1,32 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Type, Sparkles, Loader2 } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas.store";
 import { toast } from "sonner";
 import type { PromptNodeData } from "@/types/nodes";
-import { NodeDeleteButton, stopNodeKeyCapture } from "./NodeWrapper";
+import { NodeDeleteButton, NodeDuplicateButton } from "./NodeWrapper";
 
 function PromptNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as PromptNodeData;
   const updateNodeData = useCanvasStore((s) => s.updateNodeData);
   const [enhancing, setEnhancing] = useState(false);
 
+  // Estado local — evita que re-render do React Flow resete o cursor
+  const [localText, setLocalText] = useState(nodeData.text || "");
+  const isLocalEdit = useRef(false);
+  useEffect(() => {
+    if (!isLocalEdit.current) {
+      setLocalText(nodeData.text || "");
+    }
+    isLocalEdit.current = false;
+  }, [nodeData.text]);
+
   const handleTextChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      isLocalEdit.current = true;
+      setLocalText(e.target.value);
       updateNodeData(id, { text: e.target.value });
     },
     [id, updateNodeData]
@@ -48,7 +60,6 @@ function PromptNodeComponent({ id, data, selected }: NodeProps) {
 
   return (
     <div
-      onKeyDown={stopNodeKeyCapture}
       className={`group/node w-72 rounded-lg border bg-[var(--canvas-node-bg)] transition-all duration-200 ${
         selected
           ? "border-[var(--forja-ember)] shadow-[0_0_24px_rgba(255,107,26,0.15)]"
@@ -77,6 +88,7 @@ function PromptNodeComponent({ id, data, selected }: NodeProps) {
             )}
             Aprimorar
           </button>
+          <NodeDuplicateButton nodeId={id} />
           <NodeDeleteButton nodeId={id} />
         </div>
       </div>
@@ -84,7 +96,7 @@ function PromptNodeComponent({ id, data, selected }: NodeProps) {
       {/* Body */}
       <div className="p-3">
         <textarea
-          value={nodeData.text || ""}
+          value={localText}
           onChange={handleTextChange}
           onKeyDown={(e) => e.stopPropagation()}
           placeholder="Descreva o que você quer criar..."
@@ -92,7 +104,7 @@ function PromptNodeComponent({ id, data, selected }: NodeProps) {
           className="nodrag nowheel w-full resize-none rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-3 py-2 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none transition-colors"
         />
         <div className="mt-1 text-right text-[10px] text-[var(--forja-text-dim)]">
-          {(nodeData.text || "").length} caracteres
+          {localText.length} caracteres
         </div>
       </div>
 

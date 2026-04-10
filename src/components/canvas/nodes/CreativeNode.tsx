@@ -8,7 +8,9 @@ import { useGeneration } from "@/hooks/useGeneration";
 import { useNodeInputs } from "@/hooks/useNodeConnections";
 import { toast } from "sonner";
 import type { CreativeNodeData } from "@/types/nodes";
-import { NodeDeleteButton, stopNodeKeyCapture } from "./NodeWrapper";
+import { NodeDeleteButton, NodeDuplicateButton } from "./NodeWrapper";
+import { MentionTextarea } from "./MentionTextarea";
+import { resolveMentions, buildImg2ImgPrompt } from "@/lib/mentions";
 
 // Modelos por provider
 const MODELS_BY_PROVIDER: Record<string, { image: { value: string; label: string }[]; video: { value: string; label: string }[] }> = {
@@ -29,6 +31,8 @@ const MODELS_BY_PROVIDER: Record<string, { image: { value: string; label: string
   kie: {
     image: [
       { value: "grok-imagine", label: "Grok Imagine" },
+      { value: "grok-img2img", label: "Grok Img2Img (Referência)" },
+      { value: "face-swap", label: "🔄 Face Swap (Magic Hour)" },
       { value: "ideogram-v3", label: "Ideogram v3" },
       { value: "qwen", label: "Qwen" },
     ],
@@ -120,6 +124,17 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Estado local do prompt — evita que re-render do React Flow resete o cursor do textarea
+  const [localPrompt, setLocalPrompt] = useState(nodeData.prompt || "");
+  const isLocalEdit = useRef(false);
+  useEffect(() => {
+    // Sincroniza do store → local somente quando mudança veio de fora (enhance, template, etc.)
+    if (!isLocalEdit.current) {
+      setLocalPrompt(nodeData.prompt || "");
+    }
+    isLocalEdit.current = false;
+  }, [nodeData.prompt]);
+
   const provider = (nodeData as unknown as Record<string, unknown>).provider as string || "kie";
   const duration = (nodeData as unknown as Record<string, unknown>).duration as string || "10s";
   const modelValue = nodeData.model || (provider === "google" ? "nano-banana-2" : "grok-imagine");
@@ -144,13 +159,128 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
   const progress = Math.min((elapsed / estimatedTime) * 100, 95);
   const templates = PROMPT_TEMPLATES[isVideo ? "video" : "image"];
 
-  const handleGenerate = useCallback(() => {
-    const finalPrompt = nodeData.prompt || connectedPrompt || "";
+  const handleGenerate = useCallback(async () => {
+    let finalPrompt = nodeData.prompt || connectedPrompt || "";
+
+    // Resolver @mentions — coleta imagens dos nós mencionados
+    const allNodes = useCanvasStore.getState().nodes;
+    const { mentionedImageUrls, hasAvatar, hasReference } = resolveMentions(finalPrompt, allNodes);
+    const allImages = [...connectedImages, ...mentionedImageUrls];
+
+    // --- FACE SWAP: rota especial ---
+    if (modelValue === "face-swap") {
+      if (allImages.length < 2) {
+        toast.error("Face Swap precisa de 2 imagens: conecte um Avatar (rosto) + uma Referência (imagem alvo)");
+        return;
+      }
+      updateNodeData(id, { status: "generating" });
+      try {
+        // Converter blob URLs para base64 ou usar URL pública direto
+        const toBase64 = async (url: string): Promise<{ base64?: string; publicUrl?: string }> => {
+          if (url.startsWith("blob:")) {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            return new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve({ base64: reader.result as string });
+              reader.readAsDataURL(blob);
+            });
+          }
+          return { publicUrl: url };
+        };
+
+        const source = await toBase64(allImages[0]); // rosto (avatar)
+        const target = await toBase64(allImages[1]); // imagem alvo
+
+        const res = await fetch("/api/generate/face-swap", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sourceImage: source.base64,
+            targetImage: target.base64,
+            sourceUrl: source.publicUrl,
+            targetUrl: target.publicUrl,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          updateNodeData(id, { status: "failed" });
+          toast.error(data.error || "Face Swap falhou");
+          return;
+        }
+        updateNodeData(id, { status: "completed", outputUrls: data.outputUrls });
+        // Criar nó de saída
+        const { nodes: currentNodes, addNode } = useCanvasStore.getState();
+        const sourceNode = currentNodes.find((n) => n.id === id);
+        if (sourceNode && data.outputUrls?.length) {
+          data.outputUrls.forEach((url: string, i: number) => {
+            const outputId = `image-output-${Date.now()}-${i}`;
+            addNode({
+              id: outputId,
+              type: "image",
+              position: { x: sourceNode.position.x + 400, y: sourceNode.position.y + i * 220 },
+              data: { label: `Face Swap ${i + 1}`, url, width: 0, height: 0, filename: "" },
+            });
+            useCanvasStore.setState({
+              edges: [...useCanvasStore.getState().edges, {
+                id: `edge-${id}-${outputId}`, source: id, target: outputId, type: "animated", animated: true,
+              }],
+              hasUnsavedChanges: true,
+            });
+          });
+          useCanvasStore.getState().saveBoard();
+        }
+        toast.success("Face Swap concluído!");
+      } catch {
+        updateNodeData(id, { status: "failed" });
+        toast.error("Erro ao conectar com o servidor");
+      }
+      return;
+    }
+
+    // --- GERAÇÃO NORMAL ---
     if (!finalPrompt.trim()) { toast.error("Escreva um prompt primeiro"); return; }
+
+    // Auto-otimizar prompt para img2img quando tem avatar + referência
+    const isImg2Img = modelValue === "grok-img2img";
+    if (isImg2Img || (hasAvatar && hasReference)) {
+      finalPrompt = buildImg2ImgPrompt(finalPrompt, allNodes);
+      if (!isImg2Img && hasAvatar && hasReference) {
+        toast.info("Dica: use 'Face Swap (Magic Hour)' para trocar rostos com precisão");
+      }
+    }
+
+    // Converter blob: URLs para URLs públicas (upload pro server)
+    const resolvedImages: string[] = [];
+    for (const imgUrl of allImages) {
+      if (imgUrl.startsWith("blob:")) {
+        try {
+          const blobRes = await fetch(imgUrl);
+          const blob = await blobRes.blob();
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+          const uploadRes = await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ base64 }),
+          });
+          const uploadData = await uploadRes.json();
+          if (uploadData.url) resolvedImages.push(uploadData.url);
+        } catch {
+          console.error("Erro ao converter blob URL:", imgUrl);
+        }
+      } else {
+        resolvedImages.push(imgUrl);
+      }
+    }
+
     generate(id, {
       model: modelValue,
       prompt: finalPrompt,
-      imageUrls: connectedImages.length > 0 ? connectedImages : undefined,
+      imageUrls: resolvedImages.length > 0 ? resolvedImages : undefined,
       aspectRatio: nodeData.aspectRatio || "9:16",
       resolution: nodeData.resolution || "1K",
       format: nodeData.format || "png",
@@ -158,7 +288,7 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
       boardId: boardId || undefined,
       provider,
     });
-  }, [id, nodeData, modelValue, boardId, generate, connectedImages, connectedPrompt, provider]);
+  }, [id, nodeData, modelValue, boardId, generate, connectedImages, connectedPrompt, provider, updateNodeData]);
 
   const handleChange = useCallback(
     (field: string, value: string | number) => { updateNodeData(id, { [field]: value }); },
@@ -196,11 +326,12 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
   }, [nodeData.prompt, modelValue, isVideo]);
 
   return (
-    <div onKeyDown={stopNodeKeyCapture} className={`group/node w-80 rounded-lg border bg-[var(--canvas-node-bg)] transition-all duration-200 ${selected ? "border-[var(--forja-ember)] shadow-[0_0_24px_rgba(255,107,26,0.15)]" : "border-[var(--forja-border)]"}`}>
+    <div className={`group/node w-80 rounded-lg border bg-[var(--canvas-node-bg)] transition-all duration-200 ${selected ? "border-[var(--forja-ember)] shadow-[0_0_24px_rgba(255,107,26,0.15)]" : "border-[var(--forja-border)]"}`}>
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-[var(--forja-border)] px-3 py-2">
         <Flame className="h-4 w-4 text-[var(--forja-ember)]" />
         <span className="text-xs font-medium text-[var(--forja-text)]">Nó Criativo</span>
+        <NodeDuplicateButton nodeId={id} />
         <NodeDeleteButton nodeId={id} />
       </div>
 
@@ -218,6 +349,7 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
         <div className="flex flex-col gap-1">
           <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">Modelo</label>
           <select value={modelValue} onChange={(e) => handleChange("model", e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
             className="rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-2 text-xs text-[var(--forja-text)] focus:border-[var(--forja-ember)] focus:outline-none">
             {imageModels.length > 0 && <optgroup label="Imagem">{imageModels.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}</optgroup>}
             {videoModels.length > 0 && <optgroup label="Vídeo">{videoModels.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}</optgroup>}
@@ -233,12 +365,13 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
         <div className="flex flex-col gap-1">
           <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">Aspect ratio</label>
           <select value={nodeData.aspectRatio || "9:16"} onChange={(e) => handleChange("aspectRatio", e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
             className="rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-2 text-xs text-[var(--forja-text)] focus:border-[var(--forja-ember)] focus:outline-none">
             {ASPECT_RATIOS.map((r) => (<option key={r.value} value={r.value}>{r.label}</option>))}
           </select>
         </div>
 
-        {/* n_frames — toggle (só vídeo) */}
+        {/* n_frames (só vídeo) */}
         {isVideo && (
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">n_frames</label>
@@ -246,19 +379,16 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
               {N_FRAMES.map((f) => (
                 <button key={f.value} onClick={() => handleChange("duration", f.value)}
                   className={`rounded-md px-4 py-1.5 text-xs font-medium transition-colors ${
-                    (duration) === f.value
+                    duration === f.value
                       ? "bg-[var(--forja-ember)] text-[var(--forja-bg)]"
                       : "bg-[var(--forja-bg)] text-[var(--forja-text-muted)] border border-[var(--forja-border)] hover:border-[var(--forja-ember)]"
-                  }`}>
-                  {f.label}
-                </button>
+                  }`}>{f.label}</button>
               ))}
             </div>
-            <p className="text-[9px] text-[var(--forja-text-dim)]">The number of frames to be generated.</p>
           </div>
         )}
 
-        {/* size — toggle */}
+        {/* Size */}
         <div className="flex flex-col gap-1">
           <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">size</label>
           <div className="flex gap-1.5">
@@ -268,32 +398,10 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
                   (nodeData.resolution || "standard") === s.value
                     ? "bg-[var(--forja-ember)] text-[var(--forja-bg)]"
                     : "bg-[var(--forja-bg)] text-[var(--forja-text-muted)] border border-[var(--forja-border)] hover:border-[var(--forja-ember)]"
-                }`}>
-                {s.label}
-              </button>
+                }`}>{s.label}</button>
             ))}
           </div>
-          <p className="text-[9px] text-[var(--forja-text-dim)]">The quality or size of the generated {isVideo ? "video" : "image"}.</p>
         </div>
-
-        {/* remove_watermark — toggle (só vídeo) */}
-        {isVideo && (
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">remove_watermark</label>
-              <p className="text-[9px] text-[var(--forja-text-dim)]">When enabled, removes watermarks from the generated video.</p>
-            </div>
-            <button
-              onClick={() => handleChange("removeWatermark", (nodeData as unknown as Record<string, unknown>).removeWatermark ? "" : "true")}
-              className={`relative h-5 w-9 rounded-full transition-colors ${
-                (nodeData as unknown as Record<string, unknown>).removeWatermark ? "bg-[var(--forja-ember)]" : "bg-[var(--forja-border-strong)]"
-              }`}>
-              <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-                (nodeData as unknown as Record<string, unknown>).removeWatermark ? "translate-x-4" : "translate-x-0.5"
-              }`} />
-            </button>
-          </div>
-        )}
 
         {/* Formato (só imagem) */}
         {!isVideo && (
@@ -306,9 +414,7 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
                     (nodeData.format || "png") === f
                       ? "bg-[var(--forja-ember)] text-[var(--forja-bg)]"
                       : "bg-[var(--forja-bg)] text-[var(--forja-text-muted)] border border-[var(--forja-border)] hover:border-[var(--forja-ember)]"
-                  }`}>
-                  {f.toUpperCase()}
-                </button>
+                  }`}>{f.toUpperCase()}</button>
               ))}
             </div>
           </div>
@@ -323,6 +429,7 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
             const firstModel = newModels.image[0]?.value || newModels.video[0]?.value || "grok-imagine";
             updateNodeData(id, { provider: newProvider, model: firstModel });
           }}
+            onKeyDown={(e) => e.stopPropagation()}
             className="rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2 py-2 text-xs text-[var(--forja-text)] focus:border-[var(--forja-ember)] focus:outline-none">
             {API_PROVIDERS.map((p) => (<option key={p.value} value={p.value}>{p.label}</option>))}
           </select>
@@ -357,71 +464,18 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
               </div>
             </div>
           </div>
-          <textarea value={nodeData.prompt || ""} onChange={(e) => handleChange("prompt", e.target.value)}
-            onKeyDown={(e) => e.stopPropagation()}
-            placeholder="Descreva o que você quer gerar..." rows={4}
-            className="nodrag nowheel w-full resize-none rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2.5 py-2 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none leading-relaxed" />
-        </div>
-
-        {/* Variantes */}
-        <div className="flex items-center justify-between">
-          <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">Variantes</label>
-          <div className="flex items-center gap-1.5">
-            <button onClick={() => handleChange("variants", Math.max(1, (nodeData.variants || 1) - 1))}
-              className="flex h-6 w-6 items-center justify-center rounded border border-[var(--forja-border)] bg-[var(--forja-bg)] text-xs text-[var(--forja-text-muted)] hover:border-[var(--forja-ember)]">−</button>
-            <span className="w-5 text-center text-xs font-medium text-[var(--forja-text)]">{nodeData.variants || 1}</span>
-            <button onClick={() => handleChange("variants", Math.min(4, (nodeData.variants || 1) + 1))}
-              className="flex h-6 w-6 items-center justify-center rounded border border-[var(--forja-border)] bg-[var(--forja-bg)] text-xs text-[var(--forja-text-muted)] hover:border-[var(--forja-ember)]">+</button>
-          </div>
-        </div>
-
-        {/* Custo estimado */}
-        <div className="flex items-center justify-between rounded-md bg-[var(--forja-bg)] border border-[var(--forja-border)] px-3 py-2">
-          <span className="text-[10px] text-[var(--forja-text-muted)]">Custo estimado</span>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-[var(--forja-text)]">
-              {(() => {
-                const isGoogleProvider = provider === "google";
-                const costs: Record<string, { credits: number; usd: string }> = {
-                  "grok-imagine": { credits: 5, usd: "$0.02" },
-                  "nano-banana-2": { credits: 3, usd: isGoogleProvider ? "$0.00" : "$0.02" },
-                  "nano-banana-pro": { credits: 5, usd: isGoogleProvider ? "$0.00" : "$0.04" },
-                  "nano-banana": { credits: 3, usd: isGoogleProvider ? "$0.00" : "$0.02" },
-                  "imagen4-ultra": { credits: 8, usd: isGoogleProvider ? "$0.06" : "$0.08" },
-                  "imagen4": { credits: 5, usd: isGoogleProvider ? "$0.04" : "$0.06" },
-                  "imagen4-fast": { credits: 3, usd: isGoogleProvider ? "$0.02" : "$0.03" },
-                  "ideogram-v3": { credits: 8, usd: "$0.04" },
-                  "qwen": { credits: 5, usd: "$0.02" },
-                  "seedance-2": { credits: 20, usd: "$0.80" },
-                  "seedance-2-fast": { credits: 15, usd: "$0.50" },
-                  "seedance-1.5-pro": { credits: 25, usd: "$1.00" },
-                  "veo3-fast": { credits: 30, usd: isGoogleProvider ? "$0.00" : "$0.40" },
-                  "veo3-quality": { credits: 50, usd: isGoogleProvider ? "$0.00" : "$0.80" },
-                  "veo3-lite": { credits: 15, usd: isGoogleProvider ? "$0.00" : "$0.20" },
-                  "veo3": { credits: 40, usd: isGoogleProvider ? "$0.00" : "$0.60" },
-                  "runway": { credits: 25, usd: "$0.50" },
-                  "grok-video": { credits: 15, usd: "$0.30" },
-                  "sora-2-characters": { credits: 30, usd: "$0.60" },
-                };
-                const c = costs[modelValue] || { credits: 5, usd: "$0.02" };
-                const total = c.credits * (nodeData.variants || 1);
-                return `${total} créditos`;
-              })()}
-            </span>
-            <span className="text-[10px] text-[var(--forja-text-dim)]">
-              ~{(() => {
-                const usdMap: Record<string, number> = {
-                  "grok-imagine": 0.02, "imagen4-ultra": 0.05, "imagen4": 0.04,
-                  "ideogram-v3": 0.04, "qwen": 0.02,
-                  "seedance-2": 0.80, "seedance-2-fast": 0.50, "seedance-1.5-pro": 1.00,
-                  "veo3-fast": 0.40, "veo3-quality": 0.80, "veo3-lite": 0.20,
-                  "runway": 0.50, "grok-video": 0.30, "sora-2-characters": 0.60,
-                };
-                const usd = (usdMap[modelValue] || 0.02) * (nodeData.variants || 1);
-                return `$${usd.toFixed(2)}`;
-              })()}
-            </span>
-          </div>
+          <MentionTextarea
+            value={localPrompt}
+            onChange={(val) => {
+              isLocalEdit.current = true;
+              setLocalPrompt(val);
+              handleChange("prompt", val);
+            }}
+            currentNodeId={id}
+            placeholder="Descreva o que quer gerar... Use @ para mencionar nós"
+            rows={4}
+            className="nodrag nowheel w-full resize-none rounded-md border border-[var(--forja-border)] bg-[var(--forja-bg)] px-2.5 py-2 text-xs text-[var(--forja-text)] placeholder:text-[var(--forja-text-dim)] focus:border-[var(--forja-ember)] focus:outline-none leading-relaxed"
+          />
         </div>
 
         {/* Progress bar durante geração */}
@@ -461,6 +515,17 @@ function CreativeNodeComponent({ id, data, selected }: NodeProps) {
             Falhou — tente novamente
           </div>
         )}
+        {/* Variantes */}
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] font-medium text-[var(--forja-text-muted)]">Variantes</label>
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => handleChange("variants", Math.max(1, (nodeData.variants || 1) - 1))}
+              className="flex h-6 w-6 items-center justify-center rounded border border-[var(--forja-border)] bg-[var(--forja-bg)] text-xs text-[var(--forja-text-muted)] hover:border-[var(--forja-ember)]">−</button>
+            <span className="w-5 text-center text-xs font-medium text-[var(--forja-text)]">{nodeData.variants || 1}</span>
+            <button onClick={() => handleChange("variants", Math.min(4, (nodeData.variants || 1) + 1))}
+              className="flex h-6 w-6 items-center justify-center rounded border border-[var(--forja-border)] bg-[var(--forja-bg)] text-xs text-[var(--forja-text-muted)] hover:border-[var(--forja-ember)]">+</button>
+          </div>
+        </div>
 
         {/* Botão Gerar */}
         <button onClick={handleGenerate} disabled={isGenerating}

@@ -9,6 +9,8 @@ export type ForjaNodeType =
   | "remove_bg"
   | "ugc_avatar"
   | "assistant"
+  | "reference"
+  | "avatar"
   | "template";
 
 export interface ImageNodeData {
@@ -64,6 +66,14 @@ export interface CopyNodeData {
   outputs: string[];
 }
 
+export interface ReferenceNodeData {
+  label: string;
+  url?: string;
+  width?: number;
+  height?: number;
+  filename?: string;
+}
+
 export const NODE_DEFAULTS: Record<ForjaNodeType, Record<string, unknown>> = {
   image: { label: "Imagem", url: "", width: 0, height: 0, filename: "" },
   prompt: { label: "Prompt", text: "" },
@@ -104,6 +114,8 @@ export const NODE_DEFAULTS: Record<ForjaNodeType, Record<string, unknown>> = {
     messages: [],
     sources: 0,
   },
+  reference: { label: "img1", url: "", width: 0, height: 0, filename: "" },
+  avatar: { label: "avatar1", url: "", filename: "" },
   upscale: { label: "Upscale" },
   remove_bg: { label: "Remover Fundo" },
   ugc_avatar: { label: "UGC Avatar" },

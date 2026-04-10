@@ -28,6 +28,8 @@ export function useNodeInputs(nodeId: string) {
 
       switch (sourceNode.type) {
         case "image":
+        case "reference":
+        case "avatar":
           if (data.url && typeof data.url === "string") {
             imageUrls.push(data.url);
           }

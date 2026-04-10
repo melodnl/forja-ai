@@ -86,12 +86,38 @@ export async function POST(req: Request) {
         externalUrls = [payload.data.videoUrl];
       }
 
+      // Formato /jobs callback: data.resultUrls ou data.output
+      if (externalUrls.length === 0 && payload.data?.resultUrls) {
+        const raw = payload.data.resultUrls;
+        if (Array.isArray(raw)) externalUrls = raw;
+        else if (typeof raw === "string") {
+          try { externalUrls = JSON.parse(raw); } catch { externalUrls = [raw]; }
+        }
+      }
+
+      // Formato /jobs callback: data.output (string URL ou array)
+      if (externalUrls.length === 0 && payload.data?.output) {
+        const raw = payload.data.output;
+        if (Array.isArray(raw)) externalUrls = raw;
+        else if (typeof raw === "string") externalUrls = [raw];
+      }
+
       // Fallback genérico
       if (externalUrls.length === 0) {
         externalUrls = payload.output?.urls || payload.urls || [];
       }
 
+      // Último fallback: procurar qualquer URL no payload inteiro
+      if (externalUrls.length === 0) {
+        const payloadStr = JSON.stringify(payload);
+        const urlMatches = payloadStr.match(/https?:\/\/[^"'\s,\]]+\.(mp4|webm|mov|jpg|jpeg|png|webp)/gi);
+        if (urlMatches) externalUrls = [...new Set(urlMatches)];
+      }
+
       console.log("[webhook/kie] URLs encontradas:", externalUrls.length);
+      if (externalUrls.length === 0) {
+        console.log("[webhook/kie] PAYLOAD COMPLETO:", JSON.stringify(payload).slice(0, 2000));
+      }
 
       // Baixar e armazenar no Supabase Storage
       const storedUrls: string[] = [];

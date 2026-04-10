@@ -5,7 +5,7 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Bot, Send, Loader2, ChevronDown, Sparkles } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas.store";
 import { useNodeInputs } from "@/hooks/useNodeConnections";
-import { NodeDeleteButton, stopNodeKeyCapture } from "./NodeWrapper";
+import { NodeDeleteButton, NodeDuplicateButton } from "./NodeWrapper";
 
 interface Message {
   role: "user" | "assistant";
@@ -135,7 +135,6 @@ function AssistantNodeComponent({ id, data, selected }: NodeProps) {
 
   return (
     <div
-      onKeyDown={stopNodeKeyCapture}
       className={`group/node w-96 rounded-lg border bg-[var(--canvas-node-bg)] transition-all duration-200 ${
         selected
           ? "border-[var(--forja-ember)] shadow-[0_0_24px_rgba(255,107,26,0.15)]"
@@ -153,6 +152,7 @@ function AssistantNodeComponent({ id, data, selected }: NodeProps) {
             {sources} fonte{sources > 1 ? "s" : ""}
           </span>
         )}
+        <NodeDuplicateButton nodeId={id} />
         <NodeDeleteButton nodeId={id} />
       </div>
 

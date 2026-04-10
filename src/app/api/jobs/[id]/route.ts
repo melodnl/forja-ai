@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
 import { getJobStatus } from "@/lib/ai/orchestrator";
+
+// Permitir mais tempo pra download de vídeos do Google
+export const maxDuration = 60;
+
+function getServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function GET(
   _req: Request,
@@ -9,36 +18,16 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const cookieStore = await cookies();
+    const supabase = getServiceClient();
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll() {},
-        },
-      }
-    );
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-    }
-
-    // Buscar geração
+    // Buscar geração (service role bypassa RLS)
     const { data: generation, error } = await supabase
       .from("generations")
       .select("*")
       .eq("id", id)
-      .eq("user_id", user.id)
       .single();
+
+    const user = generation ? { id: generation.user_id } : null;
 
     if (error || !generation) {
       return NextResponse.json({ error: "Geração não encontrada" }, { status: 404 });
@@ -62,29 +51,61 @@ export async function GET(
         );
 
         if (jobStatus.status === "completed" && jobStatus.outputUrls) {
-          // Atualizar geração no banco
+          // Se URLs são do Google (temporárias com key), baixar pro Supabase
+          const finalUrls: string[] = [];
+          for (const rawUrl of jobStatus.outputUrls) {
+            if (rawUrl.includes("generativelanguage.googleapis.com")) {
+              try {
+                const vidRes = await fetch(rawUrl);
+                if (vidRes.ok) {
+                  const buffer = Buffer.from(await vidRes.arrayBuffer());
+                  const ct = vidRes.headers.get("content-type") || "video/mp4";
+                  const ext = ct.includes("webm") ? "webm" : "mp4";
+                  const path = `veo3/veo3-${Date.now()}-${Math.random().toString(36).slice(2, 5)}.${ext}`;
+                  const { error: upErr } = await supabase.storage.from("generations").upload(path, buffer, { contentType: ct, upsert: true });
+                  if (!upErr) {
+                    const { data: urlData } = supabase.storage.from("generations").getPublicUrl(path);
+                    finalUrls.push(urlData.publicUrl);
+                    console.log("[jobs/poll] Veo3 stored:", urlData.publicUrl);
+                  } else {
+                    finalUrls.push(rawUrl);
+                  }
+                } else {
+                  finalUrls.push(rawUrl);
+                }
+              } catch {
+                finalUrls.push(rawUrl);
+              }
+            } else {
+              finalUrls.push(rawUrl);
+            }
+          }
+
           await supabase
             .from("generations")
             .update({
               status: "completed",
-              output_urls: jobStatus.outputUrls,
+              output_urls: finalUrls,
               completed_at: new Date().toISOString(),
             })
             .eq("id", id);
 
-          // Salvar assets na biblioteca
-          for (const url of jobStatus.outputUrls) {
-            await supabase.from("assets").insert({
-              user_id: user.id,
-              generation_id: id,
-              type: generation.type === "video" ? "video" : "image",
-              url,
-            });
+          if (user) {
+            for (const url of finalUrls) {
+              await supabase.from("assets").insert({
+                user_id: user.id,
+                generation_id: id,
+                type: generation.type === "video" ? "video" : "image",
+                url,
+              });
+            }
           }
+
+          console.log("[jobs/poll] Concluído:", id, finalUrls.length, "urls");
 
           return NextResponse.json({
             status: "completed",
-            outputUrls: jobStatus.outputUrls,
+            outputUrls: finalUrls,
           });
         }
 
@@ -103,8 +124,8 @@ export async function GET(
             error: jobStatus.error,
           });
         }
-      } catch {
-        // Polling falhou, retornar status atual do banco
+      } catch (pollErr) {
+        console.error("[jobs/poll] Erro no polling:", generation.provider, pollErr);
       }
     }
 

@@ -8,6 +8,7 @@ const VIDEO_MODELS = [
   "seedance-2",
   "seedance-2-fast",
   "seedance-1.5-pro",
+  "veo3",
   "veo3-quality",
   "veo3-fast",
   "veo3-lite",

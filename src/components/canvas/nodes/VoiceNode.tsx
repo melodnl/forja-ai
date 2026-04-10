@@ -1,12 +1,12 @@
 "use client";
 
-import { memo, useCallback, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Mic, Loader2, Play, Pause } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas.store";
 import { toast } from "sonner";
 import type { VoiceNodeData } from "@/types/nodes";
-import { NodeDeleteButton, stopNodeKeyCapture } from "./NodeWrapper";
+import { NodeDeleteButton, NodeDuplicateButton } from "./NodeWrapper";
 
 const PROVIDERS = [
   { value: "elevenlabs", label: "ElevenLabs" },
@@ -19,6 +19,14 @@ function VoiceNodeComponent({ id, data, selected }: NodeProps) {
   const [generating, setGenerating] = useState(false);
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Estado local do texto — evita reset de cursor pelo React Flow
+  const [localText, setLocalText] = useState(nodeData.text || "");
+  const isLocalEdit = useRef(false);
+  useEffect(() => {
+    if (!isLocalEdit.current) setLocalText(nodeData.text || "");
+    isLocalEdit.current = false;
+  }, [nodeData.text]);
 
   const handleChange = useCallback(
     (field: string, value: string | number) => {
@@ -71,7 +79,6 @@ function VoiceNodeComponent({ id, data, selected }: NodeProps) {
 
   return (
     <div
-      onKeyDown={stopNodeKeyCapture}
       className={`group/node w-72 rounded-lg border bg-[var(--canvas-node-bg)] transition-all duration-200 ${
         selected
           ? "border-[var(--forja-ember)] shadow-[0_0_24px_rgba(255,107,26,0.15)]"
@@ -84,6 +91,7 @@ function VoiceNodeComponent({ id, data, selected }: NodeProps) {
         <span className="text-xs font-medium text-[var(--forja-text)]">
           {nodeData.label || "Voz"}
         </span>
+        <NodeDuplicateButton nodeId={id} />
         <NodeDeleteButton nodeId={id} />
       </div>
 
@@ -143,8 +151,8 @@ function VoiceNodeComponent({ id, data, selected }: NodeProps) {
 
         {/* Texto */}
         <textarea
-          value={nodeData.text || ""}
-          onChange={(e) => handleChange("text", e.target.value)}
+          value={localText}
+          onChange={(e) => { isLocalEdit.current = true; setLocalText(e.target.value); handleChange("text", e.target.value); }}
           onKeyDown={(e) => e.stopPropagation()}
           placeholder="Texto para converter em voz..."
           rows={3}

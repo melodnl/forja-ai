@@ -1,16 +1,31 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, type DragEvent } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ImageIcon, Upload, Download, Replace, X } from "lucide-react";
 import { useCanvasStore } from "@/store/canvas.store";
 import type { ImageNodeData } from "@/types/nodes";
-import { NodeDeleteButton } from "./NodeWrapper";
+import { NodeDeleteButton, NodeDuplicateButton } from "./NodeWrapper";
+import { forceDownload } from "@/lib/download";
 
 function ImageNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as ImageNodeData;
   const updateNodeData = useCanvasStore((s) => s.updateNodeData);
   const [expanded, setExpanded] = useState(false);
+  const [dragging, setDragging] = useState(false);
+
+  const handleDrop = useCallback((e: DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const url = URL.createObjectURL(file);
+    const img = new window.Image();
+    img.onload = () => { updateNodeData(id, { url, width: img.naturalWidth, height: img.naturalHeight, filename: file.name }); };
+    img.src = url;
+  }, [id, updateNodeData]);
+
+  const handleDragOver = useCallback((e: DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragging(true); }, []);
+  const handleDragLeave = useCallback((e: DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragging(false); }, []);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,8 +59,11 @@ function ImageNodeComponent({ id, data, selected }: NodeProps) {
         className={`group/node ${hasImage ? nodeWidth : "w-56"} rounded-lg border bg-[var(--canvas-node-bg)] transition-all duration-200 ${
           selected
             ? "border-[var(--forja-ember)] shadow-[0_0_24px_rgba(255,107,26,0.15)]"
+            : dragging
+            ? "border-[var(--forja-amber)] bg-[var(--forja-amber)]/5"
             : "border-[var(--forja-border)]"
         }`}
+        onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave}
       >
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-[var(--forja-border)] px-3 py-2">
@@ -53,6 +71,7 @@ function ImageNodeComponent({ id, data, selected }: NodeProps) {
           <span className="text-xs font-medium text-[var(--forja-text)]">
             {nodeData.label || "Imagem"}
           </span>
+          <NodeDuplicateButton nodeId={id} />
           <NodeDeleteButton nodeId={id} />
         </div>
 
@@ -73,9 +92,9 @@ function ImageNodeComponent({ id, data, selected }: NodeProps) {
                   <Replace className="h-3 w-3 text-[var(--forja-text)]" />
                   <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                 </label>
-                <a href={nodeData.url} download={nodeData.filename} className="rounded bg-black/70 p-1 hover:bg-black/90" onClick={(e) => e.stopPropagation()}>
+                <button className="rounded bg-black/70 p-1 hover:bg-black/90" onClick={(e) => { e.stopPropagation(); forceDownload(nodeData.url!, nodeData.filename); }}>
                   <Download className="h-3 w-3 text-[var(--forja-text)]" />
-                </a>
+                </button>
               </div>
             </div>
           ) : (
@@ -94,15 +113,17 @@ function ImageNodeComponent({ id, data, selected }: NodeProps) {
 
       {/* Fullscreen modal */}
       {expanded && nodeData.url && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm" onClick={() => setExpanded(false)}>
-          <button onClick={() => setExpanded(false)} className="absolute top-4 right-4 rounded-full bg-white/10 p-2 hover:bg-white/20">
-            <X className="h-5 w-5 text-white" />
-          </button>
-          <img src={nodeData.url} alt="" className="max-w-[90vw] max-h-[90vh] rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
-          <div className="absolute bottom-6 flex gap-3">
-            <a href={nodeData.url} download className="flex items-center gap-2 rounded-lg bg-[var(--forja-ember)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--forja-ember-hover)]">
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm" onClick={() => setExpanded(false)}>
+          <div className="relative max-w-[90vw] max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
+            <img src={nodeData.url} alt="" className="max-w-full max-h-[80vh] rounded-lg object-contain" />
+          </div>
+          <div className="flex items-center gap-3 mt-4">
+            <button onClick={(e) => { e.stopPropagation(); forceDownload(nodeData.url!, nodeData.filename); }} className="flex items-center gap-2 rounded-lg bg-[var(--forja-ember)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--forja-ember-hover)] transition-colors">
               <Download className="h-4 w-4" /> Download
-            </a>
+            </button>
+            <button onClick={() => setExpanded(false)} className="flex items-center gap-2 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-medium text-white hover:bg-white/20 transition-colors">
+              <X className="h-4 w-4" /> Fechar
+            </button>
           </div>
         </div>
       )}

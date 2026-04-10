@@ -76,10 +76,19 @@ export const googleProvider: AIProvider = {
       const data = await res.json();
 
       if (data.done) {
-        const videos = data.response?.generatedVideos || [];
-        const urls = videos.map((v: { video: { uri: string } }) => v.video.uri);
-        if (urls.length > 0) return { status: "completed", outputUrls: urls };
-        return { status: "failed", error: "Nenhum vídeo gerado" };
+        // Formato antigo: generatedVideos
+        let videos = data.response?.generatedVideos || [];
+        // Formato novo: generateVideoResponse.generatedSamples
+        if (videos.length === 0) {
+          videos = data.response?.generateVideoResponse?.generatedSamples || [];
+        }
+        const rawUrls = videos.map((v: { video: { uri: string } }) => v.video.uri).filter(Boolean);
+        if (rawUrls.length === 0) return { status: "failed", error: "Nenhum vídeo gerado" };
+
+        // Retornar URLs com key anexada — o download pro Supabase será feito pela route /api/jobs/[id]
+        console.log("[google] Veo3 done!", rawUrls.length, "videos");
+        const urlsWithKey = rawUrls.map((u: string) => u.includes("?") ? `${u}&key=${apiKey}` : `${u}?key=${apiKey}`);
+        return { status: "completed", outputUrls: urlsWithKey };
       }
       return { status: "processing" };
     } catch {
@@ -92,15 +101,41 @@ export const googleProvider: AIProvider = {
 async function generateGeminiImage(apiKey: string, params: GenerateParams): Promise<{ jobId: string }> {
   const model = IMAGE_MODELS[params.model] || "gemini-2.0-flash-preview-image-generation";
 
+  // Construir parts: texto + imagens de referência
+  const parts: Record<string, unknown>[] = [];
+
+  // Adicionar imagens de referência como inlineData
+  if (params.imageUrls && params.imageUrls.length > 0) {
+    for (const imgUrl of params.imageUrls) {
+      try {
+        const imgRes = await fetch(imgUrl);
+        if (imgRes.ok) {
+          const buffer = Buffer.from(await imgRes.arrayBuffer());
+          const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+          const base64 = buffer.toString("base64");
+          parts.push({
+            inlineData: {
+              mimeType: contentType,
+              data: base64,
+            },
+          });
+        }
+      } catch {
+        console.log("[google] Falha ao baixar imagem de referência:", imgUrl);
+      }
+    }
+  }
+
+  // Adicionar texto
+  parts.push({ text: `${params.prompt}. Aspect ratio: ${params.aspectRatio || "1:1"}` });
+
   const res = await fetch(
     `${GEMINI_BASE}/models/${model}:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{
-          parts: [{ text: `Generate an image: ${params.prompt}. Aspect ratio: ${params.aspectRatio || "1:1"}` }],
-        }],
+        contents: [{ parts }],
         generationConfig: {
           responseModalities: ["TEXT", "IMAGE"],
         },
@@ -114,11 +149,11 @@ async function generateGeminiImage(apiKey: string, params: GenerateParams): Prom
   }
 
   const data = await res.json();
-  const parts = data.candidates?.[0]?.content?.parts || [];
+  const responseParts = data.candidates?.[0]?.content?.parts || [];
   const imageUrls: string[] = [];
 
   // Upload base64 pro Supabase Storage
-  for (const part of parts) {
+  for (const part of responseParts) {
     if (part.inlineData) {
       try {
         const url = await uploadBase64ToStorage(

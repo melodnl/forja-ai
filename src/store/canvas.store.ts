@@ -169,7 +169,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   saveBoard: async () => {
     const { boardId, nodes, edges, boardName, isSaving } = get();
-    if (!boardId || isSaving) return;
+    if (!boardId) return;
+
+    // Se já está salvando, agenda retry em 1s para não perder dados
+    if (isSaving) {
+      setTimeout(() => { get().saveBoard(); }, 1000);
+      return;
+    }
 
     set({ isSaving: true });
     try {

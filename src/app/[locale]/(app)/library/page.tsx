@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { forceDownload } from "@/lib/download";
 import { toast } from "sonner";
 import { Download, Heart, Image as ImageIcon, Video, Volume2, Trash2, X } from "lucide-react";
 import type { Asset } from "@/types/database";
@@ -84,7 +85,7 @@ export default function LibraryPage() {
             return (
               <div
                 key={asset.id}
-                onClick={() => setExpanded(asset)}
+                onClick={() => forceDownload(asset.url, asset.filename || `${asset.type}-${asset.id}`)}
                 className="group relative overflow-hidden rounded-lg border border-[var(--forja-border)] bg-[var(--forja-bg-elevated)] cursor-pointer"
               >
                 {asset.type === "image" ? (
@@ -106,9 +107,9 @@ export default function LibraryPage() {
                     >
                       <Heart className={`h-3 w-3 ${asset.is_favorite ? "fill-[var(--forja-ember)] text-[var(--forja-ember)]" : "text-white"}`} />
                     </button>
-                    <a href={asset.url} download className="rounded bg-black/50 p-1">
+                    <button onClick={(e) => { e.stopPropagation(); forceDownload(asset.url, asset.filename || undefined); }} className="rounded bg-black/50 p-1">
                       <Download className="h-3 w-3 text-white" />
-                    </a>
+                    </button>
                     <button onClick={() => deleteAsset(asset.id)} className="rounded bg-black/50 p-1">
                       <Trash2 className="h-3 w-3 text-[var(--forja-error)]" />
                     </button>
@@ -164,14 +165,13 @@ export default function LibraryPage() {
 
             {/* Ações */}
             <div className="flex items-center gap-3 mt-4">
-              <a
-                href={expanded.url}
-                download
+              <button
+                onClick={() => forceDownload(expanded.url, expanded.filename || undefined)}
                 className="flex items-center gap-2 rounded-lg bg-[var(--forja-ember)] px-4 py-2 text-sm font-medium text-[var(--forja-bg)] hover:bg-[var(--forja-ember-hover)] transition-colors"
               >
                 <Download className="h-4 w-4" />
                 Download
-              </a>
+              </button>
               <button
                 onClick={() => { toggleFavorite(expanded.id, expanded.is_favorite); setExpanded({ ...expanded, is_favorite: !expanded.is_favorite }); }}
                 className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm transition-colors ${

@@ -74,13 +74,27 @@ export const kieProvider: AIProvider = {
       if (record && data.code !== 422 && record.state) {
         if (record.state === "success") {
           let urls: string[] = [];
+          // Formato principal: resultJson.resultUrls
           if (record.resultJson) {
             try {
               const result = typeof record.resultJson === "string" ? JSON.parse(record.resultJson) : record.resultJson;
-              urls = result.resultUrls || [];
+              urls = result.resultUrls || result.output || [];
+              if (!Array.isArray(urls)) urls = [urls];
             } catch {}
           }
-          return { status: "completed", outputUrls: urls };
+          // Fallback: resultUrls direto no record
+          if (urls.length === 0 && record.resultUrls) {
+            urls = Array.isArray(record.resultUrls) ? record.resultUrls : [record.resultUrls];
+          }
+          // Fallback: videoUrl no record
+          if (urls.length === 0 && record.videoUrl) {
+            urls = [record.videoUrl];
+          }
+          // Fallback: output no record
+          if (urls.length === 0 && record.output) {
+            urls = Array.isArray(record.output) ? record.output : [record.output];
+          }
+          return { status: "completed", outputUrls: urls.filter(Boolean) };
         }
         if (record.state === "fail") {
           return { status: "failed", error: record.failMsg || "Geração falhou" };
@@ -98,18 +112,60 @@ export const kieProvider: AIProvider = {
       });
       if (veoRes.ok) {
         const veoData = await veoRes.json();
-        // Sucesso: code 200 OU code 422 com resultUrls presentes
-        const hasUrls = veoData.data?.resultUrls && veoData.data.resultUrls.length > 0;
-        if (hasUrls) {
-          const urls = Array.isArray(veoData.data.resultUrls) ? veoData.data.resultUrls : [veoData.data.resultUrls];
-          return { status: "completed", outputUrls: urls };
+
+        // Extrair URLs de múltiplos formatos possíveis
+        let urls: string[] = [];
+
+        // Formato principal: data.resultUrls
+        if (veoData.data?.resultUrls) {
+          const raw = veoData.data.resultUrls;
+          urls = Array.isArray(raw) ? raw : [raw];
         }
-        // Sem URLs = still processing
+        // Formato alternativo: data.videoUrl
+        if (urls.length === 0 && veoData.data?.videoUrl) {
+          urls = [veoData.data.videoUrl];
+        }
+        // Formato alternativo: data.output
+        if (urls.length === 0 && veoData.data?.output) {
+          const raw = veoData.data.output;
+          urls = Array.isArray(raw) ? raw : [raw];
+        }
+        // Formato alternativo: data.info.resultUrls (Veo 3)
+        if (urls.length === 0 && veoData.data?.info?.resultUrls) {
+          const raw = veoData.data.info.resultUrls;
+          urls = Array.isArray(raw) ? raw : typeof raw === "string" ? (function() { try { return JSON.parse(raw); } catch { return [raw]; } })() : [raw];
+        }
+
+        // Detectar falha explícita
+        if (veoData.data?.state === "fail" || veoData.data?.status === "failed") {
+          return { status: "failed", error: veoData.data?.failMsg || veoData.data?.error || "Veo geração falhou" };
+        }
+
+        if (urls.filter(Boolean).length > 0) {
+          return { status: "completed", outputUrls: urls.filter(Boolean) };
+        }
+
         return { status: "processing" };
       }
     } catch {}
 
-    // 3. Fallback: still processing
+    // 3. Tentar /runway/status para jobs Runway
+    try {
+      const runwayRes = await fetch(`${KIE_BASE}/runway/status?taskId=${jobId}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      if (runwayRes.ok) {
+        const runwayData = await runwayRes.json();
+        if (runwayData.data?.videoUrl) {
+          return { status: "completed", outputUrls: [runwayData.data.videoUrl] };
+        }
+        if (runwayData.data?.status === "failed") {
+          return { status: "failed", error: "Runway geração falhou" };
+        }
+      }
+    } catch {}
+
+    // 4. Fallback: still processing
     return { status: "processing" };
   },
 };
